@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego/logs"
 	"encoding/json"
+
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/comisiones_mid/services"
 )
@@ -15,7 +16,7 @@ type ComisionController struct {
 
 // URLMapping ...
 func (c *ComisionController) URLMapping() {
-	c.Mapping("CrearComision", c.CrearComision)
+	c.Mapping("crear_comision", c.CrearComision)
 }
 
 // Post ...
@@ -24,7 +25,7 @@ func (c *ComisionController) URLMapping() {
 // @Param	body		body 	models.Comision	true		"body for Comision content"
 // @Success 201 {object} models.Comision
 // @Failure 403 body is empty
-// @router /CrearComision [post]
+// @router /crear_comision [post]
 func (c *ComisionController) CrearComision() {
 	defer func() {
 		if err := recover(); err != nil {

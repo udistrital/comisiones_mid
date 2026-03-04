@@ -10,7 +10,7 @@ func init() {
     beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionController"],
         beego.ControllerComments{
             Method: "CrearComision",
-            Router: "/CrearComision",
+            Router: "/crear_comision",
             AllowHTTPMethods: []string{"post"},
             MethodParams: param.Make(),
             Filters: nil,
