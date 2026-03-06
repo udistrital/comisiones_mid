@@ -7,10 +7,10 @@ import (
 
 func init() {
 
-    beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionController"],
+    beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"],
         beego.ControllerComments{
-            Method: "CrearComision",
-            Router: "/crear_comision",
+            Method: "CrearSolicitud",
+            Router: "/crear_solicitud",
             AllowHTTPMethods: []string{"post"},
             MethodParams: param.Make(),
             Filters: nil,
