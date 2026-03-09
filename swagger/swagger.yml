@@ -1,0 +1,191 @@
+swagger: "2.0"
+info:
+  title: beego Test API
+  description: beego has a very cool tools to autogenerate documents for your API
+  version: 1.0.0
+  termsOfService: http://beego.me/
+  contact:
+    email: astaxie@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+basePath: /v1
+paths:
+  /solicitud/:
+    get:
+      tags:
+      - solicitud
+      description: get Solicitud
+      operationId: SolicitudController.GetAll
+      parameters:
+      - in: query
+        name: query
+        description: Filter. e.g. col1:v1,col2:v2 ...
+        type: string
+      - in: query
+        name: fields
+        description: Fields returned. e.g. col1,col2 ...
+        type: string
+      - in: query
+        name: sortby
+        description: Sorted-by fields. e.g. col1,col2 ...
+        type: string
+      - in: query
+        name: order
+        description: Order corresponding to each sortby field, if single value, apply to all sortby fields. e.g. desc,asc ...
+        type: string
+      - in: query
+        name: limit
+        description: Limit the size of result set. Must be an integer
+        type: string
+      - in: query
+        name: offset
+        description: Start position of result set. Must be an integer
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: ""
+    post:
+      tags:
+      - solicitud
+      description: create Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
+  /solicitud/{id}:
+    get:
+      tags:
+      - solicitud
+      description: get Solicitud by id
+      operationId: SolicitudController.GetOne
+      parameters:
+      - in: path
+        name: id
+        description: The key for staticblock
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: :id is empty
+    put:
+      tags:
+      - solicitud
+      description: update the Solicitud
+      operationId: SolicitudController.Put
+      parameters:
+      - in: path
+        name: id
+        description: The id you want to update
+        required: true
+        type: string
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: :id is not int
+    delete:
+      tags:
+      - solicitud
+      description: delete the Solicitud
+      operationId: SolicitudController.Delete
+      parameters:
+      - in: path
+        name: id
+        description: The id you want to delete
+        required: true
+        type: string
+      responses:
+        "200":
+          description: '{string} delete success!'
+        "403":
+          description: id is empty
+  /solicitud/crear_solicitud:
+    post:
+      tags:
+      - solicitud
+      description: create Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
+  /solicitud/estados:
+    post:
+      tags:
+      - solicitud
+      description: Desactiva el histórico vigente (Activo=false) y crea un nuevo histórico con estado destino
+      operationId: SolicitudController.Crear estado de solicitud
+      parameters:
+      - in: body
+        name: body
+        description: Body con SolicitudId + codigos + NumeroIdentificacion
+        required: true
+        schema:
+          $ref: '#/definitions/map[string]interface{}'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: bad request
+  /solicitud/prueba_documento:
+    get:
+      tags:
+      - solicitud
+      description: prueba creación documento
+      operationId: SolicitudController.Test Documento
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+definitions:
+  map[string]interface{}:
+    title: map[string]interface{}
+    type: object
+  models.Solicitud:
+    title: Solicitud
+    type: object
+tags:
+- name: solicitud
+  description: |
+    SolicitudController operations for Solicitud
