@@ -17,14 +17,14 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	if solicitudId <= 0 {
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("solicitudId es obligatorio")
 	}
-	if strings.TrimSpace(req.EstadoDestinoCodigo) == "" {
-		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("EstadoDestinoCodigo es obligatorio")
+	if strings.TrimSpace(req.NuevoEstado) == "" {
+		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("Estado Destino es obligatorio")
 	}
-	if strings.TrimSpace(req.RolUsuarioCodigo) == "" {
-		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("RolUsuarioCodigo es obligatorio")
+	if strings.TrimSpace(req.RolUsuario) == "" {
+		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("Rol Usuario es obligatorio")
 	}
 	if strings.TrimSpace(req.NumeroIdentificacion) == "" {
-		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("NumeroIdentificacion es obligatorio")
+		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("Numero Identificacion es obligatorio")
 	}
 
 	// CRUD comisiones
@@ -47,14 +47,9 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		return models.CambioEstadoSolicitudResponse{}, err
 	}
 
-	estadoDestinoId, err := getIdByCodigoAbreviacion(baseCrud, "estado_solicitud", req.EstadoDestinoCodigo)
+	estadoDestinoId, err := getIdByCodigoAbreviacion(baseCrud, "estado_solicitud", req.NuevoEstado)
 	if err != nil {
-		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDestinoCodigo=%s: %v", req.EstadoDestinoCodigo, err)
-	}
-
-	rolUsuarioId, err := getIdByCodigoAbreviacion(baseCrud, "rol_usuario", req.RolUsuarioCodigo)
-	if err != nil {
-		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver RolUsuarioCodigo=%s: %v", req.RolUsuarioCodigo, err)
+		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDestino=%s: %v", req.NuevoEstado, err)
 	}
 
 	terceroId, err := getTerceroIdByNumeroIdentificacion(baseTerceros, req.NumeroIdentificacion)
@@ -93,7 +88,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	payloadNuevo := map[string]interface{}{
 		"SolicitudId":       map[string]interface{}{"Id": solicitudId},
 		"EstadoSolicitudId": map[string]interface{}{"Id": estadoDestinoId},
-		"RolUsuarioId":      map[string]interface{}{"Id": rolUsuarioId},
+		"RolUsuario":        strings.TrimSpace(req.RolUsuario),
 		"TerceroId":         terceroId,
 		"Activo":            true,
 	}
@@ -116,33 +111,41 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	}
 
 	var tipoDocumentoId int
-	if strings.TrimSpace(req.TipoDocumentoCodigo) != "" {
-		tipoDocumentoId, err = getIdByCodigoAbreviacion(baseCrud, "tipo_documento_solicitud", req.TipoDocumentoCodigo)
+	if strings.TrimSpace(req.TipoDocumento) != "" {
+		tipoDocumentoId, err = getIdByCodigoAbreviacion(baseCrud, "tipo_documento_solicitud", req.TipoDocumento)
 		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver TipoDocumentoCodigo=%s: %v", req.TipoDocumentoCodigo, err)
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver TipoDocumento=%s: %v", req.TipoDocumento, err)
 		}
 	}
 
 	var estadoDocumentoId int
-	if strings.TrimSpace(req.EstadoDocumentoCodigo) != "" {
-		estadoDocumentoId, err = getIdByCodigoAbreviacion(baseCrud, "estado_documento", req.EstadoDocumentoCodigo)
+	if strings.TrimSpace(req.EstadoDocumento) != "" {
+		estadoDocumentoId, err = getIdByCodigoAbreviacion(baseCrud, "estado_documento", req.EstadoDocumento)
 		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDocumentoCodigo=%s: %v", req.EstadoDocumentoCodigo, err)
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDocumento=%s: %v", req.EstadoDocumento, err)
 		}
 	}
 
-	if req.DocumentoApiId > 0 {
-		documentoUuid, err := getUuidDocumentoDesdeApi(baseDocs, req.DocumentoApiId)
-		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver UUID del documento (DocumentoApiId=%d): %v", req.DocumentoApiId, err)
+	if strings.TrimSpace(req.Base64Documento) != "" {
+		if strings.TrimSpace(req.NombreArchivo) == "" {
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("NombreArchivo es obligatorio cuando se envía Base64Documento")
 		}
 
-		docSolId, err := crearDocumentoSolicitud(baseCrud, resp.HistoricoNuevoId, documentoUuid, tipoDocumentoId, estadoDocumentoId)
+		documentoId, err := cargarDocumentoDesdeBase64(
+			baseDocs,
+			req.Base64Documento,
+			req.NombreArchivo,
+		)
+		if err != nil {
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo cargar el documento desde base64: %v", err)
+		}
+
+		docSolId, err := crearDocumentoSolicitud(baseCrud, resp.HistoricoNuevoId, documentoId, tipoDocumentoId, estadoDocumentoId)
 		if err != nil {
 			return models.CambioEstadoSolicitudResponse{}, err
 		}
 
-		resp.DocumentoUuid = documentoUuid
+		resp.DocumentoId = documentoId
 		resp.DocumentoSolicitudId = docSolId
 	}
 
@@ -213,7 +216,7 @@ func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error
 	return 0, fmt.Errorf("respuesta inválida: no existe TerceroId en datos_identificacion")
 }
 
-func getUuidDocumentoDesdeApi(baseDocs string, documentoApiId int) (string, error) {
+/*func getUuidDocumentoDesdeApi(baseDocs string, documentoApiId int) (string, error) {
 	getURL := joinURL(baseDocs, fmt.Sprintf("/documento/%d", documentoApiId))
 
 	var rawResp interface{}
@@ -256,15 +259,16 @@ func getUuidDocumentoDesdeApi(baseDocs string, documentoApiId int) (string, erro
 
 	return enlace, nil
 }
+*/
 
-func crearDocumentoSolicitud(baseCrud string, historicoId int, uuid string, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
+func crearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
 	postURL := joinURL(baseCrud, "/documento_solicitud")
 	if err := validateAbsoluteURL(postURL); err != nil {
 		return 0, err
 	}
 
 	payload := map[string]interface{}{
-		"DocumentoId":                uuid,
+		"DocumentoId":                id,
 		"HistoricoEstadoSolicitudId": map[string]interface{}{"Id": historicoId},
 		"Activo":                     true,
 	}
@@ -282,7 +286,7 @@ func crearDocumentoSolicitud(baseCrud string, historicoId int, uuid string, tipo
 		return 0, fmt.Errorf("error creando documento_solicitud: %v", err)
 	}
 
-	id := extractId(postResp)
+	id = extractId(postResp)
 	return id, nil
 }
 
@@ -465,4 +469,43 @@ func extractId(resp map[string]interface{}) int {
 		return id
 	}
 	return 0
+}
+
+func cargarDocumentoDesdeBase64(baseDocs, base64Documento, nombreArchivo string) (int, error) {
+	postURL := joinURL(baseDocs, "/documento")
+	if err := validateAbsoluteURL(postURL); err != nil {
+		return 0, err
+	}
+
+	payload := map[string]interface{}{
+		"file":   strings.TrimSpace(base64Documento),
+		"nombre": strings.TrimSpace(nombreArchivo),
+	}
+
+	var postResp interface{}
+	err := request.SendJson(postURL, "POST", &postResp, payload)
+	if err != nil {
+		return 0, fmt.Errorf("error cargando documento al gestor documental: %v", err)
+	}
+
+	row, err := firstRowFromResponse(postResp)
+	if err != nil {
+		return 0, fmt.Errorf("respuesta inválida al cargar documento: %v", err)
+	}
+
+	if v, ok := row["Id"]; ok {
+		id, convErr := strconv.Atoi(fmt.Sprintf("%v", v))
+		if convErr == nil && id > 0 {
+			return id, nil
+		}
+	}
+
+	if v, ok := row["id"]; ok {
+		id, convErr := strconv.Atoi(fmt.Sprintf("%v", v))
+		if convErr == nil && id > 0 {
+			return id, nil
+		}
+	}
+
+	return 0, fmt.Errorf("no se pudo extraer el id del documento creado")
 }
