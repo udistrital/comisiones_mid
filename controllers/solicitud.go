@@ -3,13 +3,13 @@ package controllers
 import (
 	"encoding/json"
 
+	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/comisiones_mid/helpers"
-	"fmt"
-	"strconv"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/comisiones_mid/services"
+	"strconv"
 )
 
 // SolicitudController operations for Solicitud
@@ -52,7 +52,7 @@ func (c *SolicitudController) CrearSolicitud() {
 	var v models.CrearSolicitudEntrada
 	//var v map[string]interface{}
 	json.Unmarshal(c.Ctx.Input.RequestBody, &v)
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil{
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
 		if response, err := services.CrearSolicitud(v); err == nil {
 			c.Ctx.Output.SetStatus(201)
 			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
@@ -71,13 +71,13 @@ func (c *SolicitudController) CrearSolicitud() {
 func (c *SolicitudController) PruebaDocumento() {
 
 	id := helpers.CrearDocumento(models.Documento{
-		Nombre:      	"documento prueba comisiones",
-		Descripcion: 	"prueba para comisiones",
-		Metadatos: 		"{\"NombreArchivo\":\"Resolucion_486.pdf\",\"FechaCreacion\":\"12_Dec_2018_13:47:57\",\"Tipo\":\"Archivo\",\"IdNuxeo\":\"b72eeb98-f3d1-4e07-afdd-f3ea0fa612f6\",\"Observaciones\":\"Ninguna\"}",
+		Nombre:      "documento prueba comisiones",
+		Descripcion: "prueba para comisiones",
+		Metadatos:   "{\"NombreArchivo\":\"Resolucion_486.pdf\",\"FechaCreacion\":\"12_Dec_2018_13:47:57\",\"Tipo\":\"Archivo\",\"IdNuxeo\":\"b72eeb98-f3d1-4e07-afdd-f3ea0fa612f6\",\"Observaciones\":\"Ninguna\"}",
 		TipoDocumento: &models.TipoDocumento{
 			Id: 6,
 		},
-		Activo:      	true,
+		Activo: true,
 	})
 
 	c.Data["json"] = map[string]interface{}{

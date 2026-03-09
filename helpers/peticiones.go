@@ -8,8 +8,6 @@ import (
 	"github.com/astaxie/beego"
 )
 
-
-
 func GetJsonTest(url string, target interface{}) (status int, err error) {
 	r, err := http.Get(url)
 	if err != nil {

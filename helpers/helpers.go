@@ -8,7 +8,7 @@ import (
 
 func CrearDocumento(documento models.Documento) (id_documento int) {
 	url_documentos := "http://pruebasapi.intranetoas.udistrital.edu.co:8094/v1/"
-	var respuesta_creacion map[string]interface{}	
+	var respuesta_creacion map[string]interface{}
 	if status, err := PostJsonTest(url_documentos+"documento", documento, &respuesta_creacion); err == nil && (status == 200 || status == 201) {
 		if id, ok := respuesta_creacion["Id"]; ok {
 			switch v := id.(type) {
