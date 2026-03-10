@@ -7,8 +7,10 @@ type CambioEstadoSolicitudRequest struct {
 	NumeroIdentificacion string `json:"NumeroIdentificacion"`
 	TipoDocumento        string `json:"TipoDocumento,omitempty"`
 	EstadoDocumento      string `json:"EstadoDocumento,omitempty"`
-	Base64Documento      string `json:"Base64Documento,omitempty"`
+	//	Base64Documento      string `json:"Base64Documento,omitempty"`
 	NombreArchivo        string `json:"NombreArchivo,omitempty"`
+	DescripcionDocumento string `json:"descripcion_documento,omitempty"`
+	Metadatos            string `json:"metadatos,omitempty"`
 }
 
 type CambioEstadoSolicitudResponse struct {

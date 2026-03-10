@@ -9,6 +9,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
@@ -37,12 +38,6 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	// CRUD terceros
 	baseTerceros, err := getBaseURL("UrlTercerosCrud", "COMISIONES_MID_V1_TERCEROS")
 	logs.Info("UrlTercerosCrud=%q", beego.AppConfig.String("UrlTercerosCrud"))
-	if err != nil {
-		return models.CambioEstadoSolicitudResponse{}, err
-	}
-
-	baseDocs, err := getBaseURL("UrlDocumentos", "COMISIONES_MID_V1_DOCUMENTOS")
-	logs.Info("UrlDocumentos=%q", beego.AppConfig.String("UrlDocumentos"))
 	if err != nil {
 		return models.CambioEstadoSolicitudResponse{}, err
 	}
@@ -126,18 +121,23 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		}
 	}
 
-	if strings.TrimSpace(req.Base64Documento) != "" {
-		if strings.TrimSpace(req.NombreArchivo) == "" {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("NombreArchivo es obligatorio cuando se envía Base64Documento")
+	if strings.TrimSpace(req.NombreArchivo) != "" {
+		documento := models.Documento{
+			Nombre:      strings.TrimSpace(req.NombreArchivo),
+			Descripcion: strings.TrimSpace(req.DescripcionDocumento),
+			Metadatos:   strings.TrimSpace(req.Metadatos),
+			Activo:      true,
 		}
 
-		documentoId, err := cargarDocumentoDesdeBase64(
-			baseDocs,
-			req.Base64Documento,
-			req.NombreArchivo,
-		)
-		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo cargar el documento desde base64: %v", err)
+		if tipoDocumentoId > 0 {
+			documento.TipoDocumento = &models.TipoDocumento{
+				Id: tipoDocumentoId,
+			}
+		}
+
+		documentoId := helpers.CrearDocumento(documento)
+		if documentoId <= 0 {
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo crear el documento con la función de prueba")
 		}
 
 		docSolId, err := crearDocumentoSolicitud(baseCrud, resp.HistoricoNuevoId, documentoId, tipoDocumentoId, estadoDocumentoId)
@@ -469,43 +469,4 @@ func extractId(resp map[string]interface{}) int {
 		return id
 	}
 	return 0
-}
-
-func cargarDocumentoDesdeBase64(baseDocs, base64Documento, nombreArchivo string) (int, error) {
-	postURL := joinURL(baseDocs, "/documento")
-	if err := validateAbsoluteURL(postURL); err != nil {
-		return 0, err
-	}
-
-	payload := map[string]interface{}{
-		"file":   strings.TrimSpace(base64Documento),
-		"nombre": strings.TrimSpace(nombreArchivo),
-	}
-
-	var postResp interface{}
-	err := request.SendJson(postURL, "POST", &postResp, payload)
-	if err != nil {
-		return 0, fmt.Errorf("error cargando documento al gestor documental: %v", err)
-	}
-
-	row, err := firstRowFromResponse(postResp)
-	if err != nil {
-		return 0, fmt.Errorf("respuesta inválida al cargar documento: %v", err)
-	}
-
-	if v, ok := row["Id"]; ok {
-		id, convErr := strconv.Atoi(fmt.Sprintf("%v", v))
-		if convErr == nil && id > 0 {
-			return id, nil
-		}
-	}
-
-	if v, ok := row["id"]; ok {
-		id, convErr := strconv.Atoi(fmt.Sprintf("%v", v))
-		if convErr == nil && id > 0 {
-			return id, nil
-		}
-	}
-
-	return 0, fmt.Errorf("no se pudo extraer el id del documento creado")
 }
