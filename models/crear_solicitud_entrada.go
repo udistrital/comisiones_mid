@@ -8,3 +8,4 @@ type CrearSolicitudEntrada struct {
 	Observacion				string									`json:"observacion"`
 	CodigoAbreviacionRol	string									`json:"cod_abreviacion_rol"`
 }
+

@@ -5,6 +5,7 @@ import (
 
 	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
+	"encoding/json"
 	// "github.com/udistrital/utils_oas/request"
 )
 
@@ -19,7 +20,6 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	comision_crud := "http://localhost:8080/v1/"
 	// Llamar terceros para buscar datos
 	//Busqueda de datos del tercero por numero de documento
-	fmt.Println(solicitud.TipoSolicitudId)
 	var persona []map[string]interface{}
 	if response, err := helpers.GetJsonTest(terceros_url+"datos_identificacion?query=Numero:"+fmt.Sprintf("%d", solicitud.Identificacion), &persona); (err == nil) && (response == 200) {
 		if len(persona) > 0 && len(persona[0]) > 0 {
@@ -32,10 +32,29 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 						Id: solicitud.TipoSolicitudId,
 					}
 					fmt.Println(respuesta)
-					var respuesta_creacion []map[string]interface{}
-					if response, err := helpers.PostJsonTest(comision_crud+"solicitud", &respuesta, respuesta_creacion); (err == nil) && (response == 200) {
-						fmt.Println(response)
-						fmt.Println(err)
+					var respuesta_creacion models.ResponseSolicitud
+					if response, err := helpers.PostJsonTest(comision_crud+"solicitud", &respuesta, &respuesta_creacion); (err == nil) && (response == 201) {
+						print(response)
+						if solicitud.Formulario != nil{
+							formularioBytes, err := json.Marshal(solicitud.Formulario)
+							if err != nil {
+								fmt.Println("Error convirtiendo formulario a JSON:", err)
+								return respuesta, map[string]interface{}{"error": err.Error()}
+							}
+							fmt.Println(respuesta_creacion.Data.Id)
+							var solicitud_temp models.SolicitudInicial
+							solicitud_temp.Id = respuesta_creacion.Data.Id
+							detalles_solicitud := models.DetalleSolicitud{
+								SolicitudId: &solicitud_temp,
+								Formulario: string(formularioBytes),
+								Activo: true,
+							}
+							var respuesta_detalle_solicitud models.DetalleSolicitud
+							fmt.Println("CREO LA SOLICITUD")
+							if response, err := helpers.PostJsonTest(comision_crud+"detalle_solicitud", &detalles_solicitud, &respuesta_detalle_solicitud); (err == nil) && (response == 201) {
+								fmt.Println("SE CREA LA SOLICITUD CON FORMULARIO")
+							}
+						}
 					}
 				}
 			}
