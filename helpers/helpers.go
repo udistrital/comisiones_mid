@@ -23,13 +23,8 @@ func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resulta
 		documentos,
 		&respuesta_creacion,
 	); err == nil && (status == 200 || status == 201) {
-
-		fmt.Println("CORRECTA CREACION DE LOS DOCUMENTOS")
-
 		if res, ok := respuesta_creacion["res"]; ok {
-
 			switch docs := res.(type) {
-
 			// varios documentos
 			case []interface{}:
 				for _, d := range docs {
