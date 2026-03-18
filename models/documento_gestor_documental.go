@@ -1,6 +1,6 @@
 package models
 
-type CrearDocumentoGestorDocumental struct{
+type CrearDocumentoGestorDocumental struct {
 	IdTipoDocumento int         `json:"IdTipoDocumento"`
 	Nombre          string      `json:"nombre"`
 	Descripcion     string      `json:"descripcion"`

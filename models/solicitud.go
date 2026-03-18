@@ -1,10 +1,10 @@
 package models
 
 type SolicitudInicial struct {
-	Id					int
-	TerceroId       	int
-	TipoSolicitudId 	*TipoSolicitud
-	Activo          	bool
+	Id              int
+	TerceroId       int
+	TipoSolicitudId *TipoSolicitud
+	Activo          bool
 }
 
 type TipoSolicitud struct {
@@ -12,8 +12,8 @@ type TipoSolicitud struct {
 }
 
 type ResponseSolicitud struct {
-	Data    SolicitudInicial 		`json:"Data"`
-	Message string                  `json:"Message"`
-	Status  string                  `json:"Status"`
-	Success bool                    `json:"Success"`
+	Data    SolicitudInicial `json:"Data"`
+	Message string           `json:"Message"`
+	Status  string           `json:"Status"`
+	Success bool             `json:"Success"`
 }

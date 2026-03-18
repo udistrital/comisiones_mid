@@ -153,20 +153,19 @@ func (c *SolicitudController) SolicitudByIdentificacion() {
 	fmt.Println("ENTRA A BUSCAR")
 	fmt.Println(idStr)
 	id, err := strconv.Atoi(idStr)
-	if err == nil{
+	if err == nil {
 		if response, err := services.BuscarSolicitudIdentificacion(id); err == nil {
 			c.Ctx.Output.SetStatus(201)
 			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
 		} else {
 			panic(err)
 		}
-	}else{
+	} else {
 		panic(err)
 	}
-	
+
 	c.ServeJSON()
 }
-
 
 // GetOne ...
 // @Title GetOne

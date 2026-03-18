@@ -3,9 +3,9 @@ package services
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
-	"encoding/json"
 	// "github.com/udistrital/utils_oas/request"
 )
 
@@ -35,7 +35,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 					var respuesta_creacion models.ResponseSolicitud
 					if response, err := helpers.PostJsonTest(comision_crud+"solicitud", &respuesta, &respuesta_creacion); (err == nil) && (response == 201) {
 						print(response)
-						if solicitud.Formulario != nil{
+						if solicitud.Formulario != nil {
 							formularioBytes, err := json.Marshal(solicitud.Formulario)
 							if err != nil {
 								fmt.Println("Error convirtiendo formulario a JSON:", err)
@@ -46,8 +46,8 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 							solicitud_temp.Id = respuesta_creacion.Data.Id
 							detalles_solicitud := models.DetalleSolicitud{
 								SolicitudId: &solicitud_temp,
-								Formulario: string(formularioBytes),
-								Activo: true,
+								Formulario:  string(formularioBytes),
+								Activo:      true,
 							}
 							var respuesta_detalle_solicitud models.DetalleSolicitud
 							fmt.Println("CREO LA SOLICITUD")
