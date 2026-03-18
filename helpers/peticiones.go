@@ -3,6 +3,7 @@ package helpers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/astaxie/beego"
@@ -25,6 +26,7 @@ func GetJsonTest(url string, target interface{}) (status int, err error) {
 func PostJsonTest(url string, data interface{}, target interface{}) (status int, err error) {
 
 	body := new(bytes.Buffer)
+	fmt.Println(body)
 	if data != nil {
 		if err = json.NewEncoder(body).Encode(data); err != nil {
 			return 0, err
@@ -41,6 +43,7 @@ func PostJsonTest(url string, data interface{}, target interface{}) (status int,
 			beego.Error(err)
 		}
 	}()
-
+	fmt.Println(r.StatusCode)
+	fmt.Println(json.NewDecoder(r.Body))
 	return r.StatusCode, json.NewDecoder(r.Body).Decode(target)
 }

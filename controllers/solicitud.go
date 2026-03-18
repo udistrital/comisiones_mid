@@ -68,24 +68,33 @@ func (c *SolicitudController) CrearSolicitud() {
 // @Title Test Documento
 // @Description prueba creación documento
 // @Success 200 {object} map[string]interface{}
-// @router /prueba_documento [get]
+// @router /prueba_documento [post]
 func (c *SolicitudController) PruebaDocumento() {
 
-	id := helpers.CrearDocumento(models.Documento{
-		Nombre:      "documento prueba comisiones",
-		Descripcion: "prueba para comisiones",
-		Metadatos:   "{\"NombreArchivo\":\"Resolucion_486.pdf\",\"FechaCreacion\":\"12_Dec_2018_13:47:57\",\"Tipo\":\"Archivo\",\"IdNuxeo\":\"b72eeb98-f3d1-4e07-afdd-f3ea0fa612f6\",\"Observaciones\":\"Ninguna\"}",
-		TipoDocumento: &models.TipoDocumento{
-			Id: 6,
-		},
-		Activo: true,
-	})
-
-	c.Data["json"] = map[string]interface{}{
-		"Success": true,
-		"Id":      id,
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Error(err)
+			localError := err.(map[string]interface{})
+			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "PruebaDocumento" + "/" + (localError["funcion"]).(string))
+			c.Data["data"] = (localError["err"])
+			if status, ok := localError["status"]; ok {
+				c.Abort(status.(string))
+			} else {
+				c.Abort("404")
+			}
+		}
+	}()
+	var v []models.CrearDocumentoGestorDocumental
+	//var v map[string]interface{}
+	json.Unmarshal(c.Ctx.Input.RequestBody, &v)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
+		if response, err := helpers.CrearDocumento(v); err == nil {
+			c.Ctx.Output.SetStatus(201)
+			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
+		} else {
+			panic(err)
+		}
 	}
-
 	c.ServeJSON()
 }
 
@@ -196,7 +205,6 @@ func (c *SolicitudController) PostEstados() {
 		return
 	}
 
-	// Parse tipado del request
 	var req models.CambioEstadoSolicitudRequest
 	b, _ := json.Marshal(body)
 	if err := json.Unmarshal(b, &req); err != nil {

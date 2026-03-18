@@ -74,7 +74,7 @@ func init() {
         beego.ControllerComments{
             Method: "PruebaDocumento",
             Router: "/prueba_documento",
-            AllowHTTPMethods: []string{"get"},
+            AllowHTTPMethods: []string{"post"},
             MethodParams: param.Make(),
             Filters: nil,
             Params: nil})
