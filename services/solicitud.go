@@ -63,3 +63,56 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 
 	return respuesta, outputError
 }
+
+func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.SolicitudResumen, outputError map[string]interface{}) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			outputError = map[string]interface{}{
+				"funcion": "/BuscarSolicitudIdentificacion",
+				"err":     err,
+				"status":  "404",
+			}
+			panic(outputError)
+		}
+	}()
+
+	comision_crud := "http://localhost:8080/v1/"
+
+	var persona map[string]interface{}
+
+	if response, err := helpers.GetJsonTest(
+		comision_crud+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", identificacion),
+		&persona,
+	); err == nil && response == 200 {
+
+		// 🔥 acceder a Data
+		if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {
+
+			for _, item := range data {
+
+				if itemMap, ok := item.(map[string]interface{}); ok {
+
+					var sol models.SolicitudResumen
+
+					if id, ok := itemMap["Id"].(float64); ok {
+						sol.Id = int(id)
+					}
+
+					if activo, ok := itemMap["Activo"].(bool); ok {
+						sol.Activo = activo
+					}
+
+					respuesta = append(respuesta, sol)
+				}
+			}
+
+			return respuesta, nil
+		}
+	}
+
+	return nil, map[string]interface{}{
+		"error":  "no se encontró solicitud",
+		"status": 404,
+	}
+}
