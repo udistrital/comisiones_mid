@@ -21,6 +21,7 @@ type SolicitudController struct {
 func (c *SolicitudController) URLMapping() {
 	c.Mapping("crear_solicitud", c.CrearSolicitud)
 	c.Mapping("prueba_documento", c.PruebaDocumento)
+	c.Mapping("solicitudes_by_identificacion", c.SolicitudByIdentificacion)
 	c.Mapping("Post", c.Post)
 	c.Mapping("GetOne", c.GetOne)
 	c.Mapping("GetAll", c.GetAll)
@@ -67,24 +68,33 @@ func (c *SolicitudController) CrearSolicitud() {
 // @Title Test Documento
 // @Description prueba creación documento
 // @Success 200 {object} map[string]interface{}
-// @router /prueba_documento [get]
+// @router /prueba_documento [post]
 func (c *SolicitudController) PruebaDocumento() {
 
-	id := helpers.CrearDocumento(models.Documento{
-		Nombre:      "documento prueba comisiones",
-		Descripcion: "prueba para comisiones",
-		Metadatos:   "{\"NombreArchivo\":\"Resolucion_486.pdf\",\"FechaCreacion\":\"12_Dec_2018_13:47:57\",\"Tipo\":\"Archivo\",\"IdNuxeo\":\"b72eeb98-f3d1-4e07-afdd-f3ea0fa612f6\",\"Observaciones\":\"Ninguna\"}",
-		TipoDocumento: &models.TipoDocumento{
-			Id: 6,
-		},
-		Activo: true,
-	})
-
-	c.Data["json"] = map[string]interface{}{
-		"Success": true,
-		"Id":      id,
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Error(err)
+			localError := err.(map[string]interface{})
+			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "PruebaDocumento" + "/" + (localError["funcion"]).(string))
+			c.Data["data"] = (localError["err"])
+			if status, ok := localError["status"]; ok {
+				c.Abort(status.(string))
+			} else {
+				c.Abort("404")
+			}
+		}
+	}()
+	var v []models.CrearDocumentoGestorDocumental
+	//var v map[string]interface{}
+	json.Unmarshal(c.Ctx.Input.RequestBody, &v)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
+		if response, err := helpers.CrearDocumento(v); err == nil {
+			c.Ctx.Output.SetStatus(201)
+			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
+		} else {
+			panic(err)
+		}
 	}
-
 	c.ServeJSON()
 }
 
@@ -115,6 +125,45 @@ func (c *SolicitudController) Post() {
 
 	c.Ctx.Output.SetStatus(201)
 	c.Data["json"] = map[string]interface{}{"Success": true, "Status": 201, "Message": "Estado actualizado correctamente", "Data": resp}
+	c.ServeJSON()
+}
+
+// Buscar Solicitud por Identificacion...
+// @Title Create
+// @Description search Solicitud
+// @Param	body		body 	models.Solicitud	true		"body for Solicitud content"
+// @Success 201 {object} models.Solicitud
+// @Failure 403 body is empty
+// @router /solicitudes_by_identificacion/:id [get]
+func (c *SolicitudController) SolicitudByIdentificacion() {
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Error(err)
+			localError := err.(map[string]interface{})
+			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "SolicitudByIdentificacion" + "/" + (localError["funcion"]).(string))
+			c.Data["data"] = (localError["err"])
+			if status, ok := localError["status"]; ok {
+				c.Abort(status.(string))
+			} else {
+				c.Abort("404")
+			}
+		}
+	}()
+	idStr := c.Ctx.Input.Param(":id")
+	fmt.Println("ENTRA A BUSCAR")
+	fmt.Println(idStr)
+	id, err := strconv.Atoi(idStr)
+	if err == nil {
+		if response, err := services.BuscarSolicitudIdentificacion(id); err == nil {
+			c.Ctx.Output.SetStatus(201)
+			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
+		} else {
+			panic(err)
+		}
+	} else {
+		panic(err)
+	}
+
 	c.ServeJSON()
 }
 
