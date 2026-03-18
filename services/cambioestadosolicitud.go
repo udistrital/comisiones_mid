@@ -9,6 +9,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
@@ -37,12 +38,6 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	// CRUD terceros
 	baseTerceros, err := getBaseURL("UrlTercerosCrud", "COMISIONES_MID_V1_TERCEROS")
 	logs.Info("UrlTercerosCrud=%q", beego.AppConfig.String("UrlTercerosCrud"))
-	if err != nil {
-		return models.CambioEstadoSolicitudResponse{}, err
-	}
-
-	baseDocs, err := getBaseURL("UrlDocumentos", "COMISIONES_MID_V1_DOCUMENTOS")
-	logs.Info("UrlDocumentos=%q", beego.AppConfig.String("UrlDocumentos"))
 	if err != nil {
 		return models.CambioEstadoSolicitudResponse{}, err
 	}
@@ -110,46 +105,143 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("se creó el histórico pero no se pudo extraer su Id de la respuesta del CRUD")
 	}
 
-	var tipoDocumentoId int
-	if strings.TrimSpace(req.TipoDocumento) != "" {
-		tipoDocumentoId, err = getIdByCodigoAbreviacion(baseCrud, "tipo_documento_solicitud", req.TipoDocumento)
+	// Observación opcional del cambio de estado
+	if strings.TrimSpace(req.Observacion) != "" {
+		observacionId, err := CrearObservacion(baseCrud, resp.HistoricoNuevoId, req.Observacion)
 		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver TipoDocumento=%s: %v", req.TipoDocumento, err)
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("error creando observación: %v", err)
 		}
+		resp.ObservacionId = observacionId
 	}
 
-	var estadoDocumentoId int
-	if strings.TrimSpace(req.EstadoDocumento) != "" {
-		estadoDocumentoId, err = getIdByCodigoAbreviacion(baseCrud, "estado_documento", req.EstadoDocumento)
-		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDocumento=%s: %v", req.EstadoDocumento, err)
-		}
-	}
-
-	if strings.TrimSpace(req.Base64Documento) != "" {
-		if strings.TrimSpace(req.NombreArchivo) == "" {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("NombreArchivo es obligatorio cuando se envía Base64Documento")
-		}
-
-		documentoId, err := cargarDocumentoDesdeBase64(
-			baseDocs,
-			req.Base64Documento,
-			req.NombreArchivo,
-		)
-		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo cargar el documento desde base64: %v", err)
-		}
-
-		docSolId, err := crearDocumentoSolicitud(baseCrud, resp.HistoricoNuevoId, documentoId, tipoDocumentoId, estadoDocumentoId)
+	// Documentos múltiples opcionales asociados al nuevo histórico
+	if len(req.Documentos) > 0 {
+		documentoIds, documentoSolicitudIds, err := crearDocumentosSolicitudMultiples(baseCrud, resp.HistoricoNuevoId, req.Documentos)
 		if err != nil {
 			return models.CambioEstadoSolicitudResponse{}, err
 		}
 
-		resp.DocumentoId = documentoId
-		resp.DocumentoSolicitudId = docSolId
+		resp.DocumentoIds = documentoIds
+		resp.DocumentoSolicitudIds = documentoSolicitudIds
+
+		// Compatibilidad hacia atrás, si aún tienes estos campos en el response
+		if len(documentoIds) > 0 {
+			resp.DocumentoId = documentoIds[0]
+		}
+		if len(documentoSolicitudIds) > 0 {
+			resp.DocumentoSolicitudId = documentoSolicitudIds[0]
+		}
+	}
+
+	// Crear comisión solo si el código abreviación es APROB_EJEC
+	if strings.EqualFold(strings.TrimSpace(req.NuevoEstado), "APROB_EJEC") {
+		comisionId, err := CrearComision(baseCrud, solicitudId, terceroId, req.RolUsuario)
+		if err != nil {
+			logs.Error("error creando comisión para solicitud %d: %v", solicitudId, err)
+		} else if comisionId > 0 {
+			resp.ComisionId = comisionId
+		}
 	}
 
 	return resp, nil
+}
+
+func crearDocumentosSolicitudMultiples(
+	baseCrud string,
+	historicoId int,
+	documentosReq []models.DocumentoCambioEstadoRequest) ([]int, []int, error) {
+	if historicoId <= 0 {
+		return nil, nil, fmt.Errorf("historicoId es obligatorio")
+	}
+
+	if len(documentosReq) == 0 {
+		return []int{}, []int{}, nil
+	}
+
+	documentosGestor := make([]models.CrearDocumentoGestorDocumental, 0, len(documentosReq))
+
+	for i, doc := range documentosReq {
+		if doc.IdTipoDocumento <= 0 {
+			return nil, nil, fmt.Errorf("Documentos[%d].IdTipoDocumento es obligatorio", i)
+		}
+		if strings.TrimSpace(doc.NombreArchivo) == "" {
+			return nil, nil, fmt.Errorf("Documentos[%d].NombreArchivo es obligatorio", i)
+		}
+		if strings.TrimSpace(doc.File) == "" {
+			return nil, nil, fmt.Errorf("Documentos[%d].File es obligatorio", i)
+		}
+
+		documentosGestor = append(documentosGestor, models.CrearDocumentoGestorDocumental{
+			IdTipoDocumento: doc.IdTipoDocumento,
+			Nombre:          strings.TrimSpace(doc.NombreArchivo),
+			Descripcion:     strings.TrimSpace(doc.DescripcionDocumento),
+			Metadatos:       doc.Metadatos,
+			File:            strings.TrimSpace(doc.File),
+		})
+	}
+
+	resultadoDocs, outputError := helpers.CrearDocumento(documentosGestor)
+	if outputError != nil {
+		return nil, nil, fmt.Errorf("error creando documentos en gestor documental: %v", outputError)
+	}
+
+	if len(resultadoDocs) == 0 {
+		return nil, nil, fmt.Errorf("no se recibió respuesta con documentos creados")
+	}
+
+	if len(resultadoDocs) != len(documentosReq) {
+		return nil, nil, fmt.Errorf("la cantidad de documentos creados no coincide con la cantidad enviada")
+	}
+
+	documentoIds := make([]int, 0, len(resultadoDocs))
+	documentoSolicitudIds := make([]int, 0, len(resultadoDocs))
+
+	for i, resultado := range resultadoDocs {
+		documentoId, err := strconv.Atoi(fmt.Sprintf("%v", resultado["id"]))
+		if err != nil || documentoId <= 0 {
+			return nil, nil, fmt.Errorf("no se pudo extraer el id del documento creado en la posición %d", i)
+		}
+
+		var tipoDocumentoSolicitudId int
+		if strings.TrimSpace(documentosReq[i].TipoDocumento) != "" {
+			tipoDocumentoSolicitudId, err = getIdByCodigoAbreviacion(
+				baseCrud,
+				"tipo_documento_solicitud",
+				documentosReq[i].TipoDocumento,
+			)
+			if err != nil {
+				return nil, nil, fmt.Errorf("no se pudo resolver TipoDocumento del documento %d: %v", i, err)
+			}
+		}
+
+		var estadoDocumentoId int
+		if strings.TrimSpace(documentosReq[i].EstadoDocumento) != "" {
+			estadoDocumentoId, err = getIdByCodigoAbreviacion(
+				baseCrud,
+				"estado_documento",
+				documentosReq[i].EstadoDocumento,
+			)
+			if err != nil {
+				return nil, nil, fmt.Errorf("no se pudo resolver EstadoDocumento del documento %d: %v", i, err)
+			}
+		}
+
+		documentoSolicitudId, err := crearDocumentoSolicitud(
+			baseCrud,
+			historicoId,
+			documentoId,
+			tipoDocumentoSolicitudId,
+			estadoDocumentoId,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error creando documento_solicitud para el documento %d: %v", i, err)
+		}
+
+		documentoIds = append(documentoIds, documentoId)
+		documentoSolicitudIds = append(documentoSolicitudIds, documentoSolicitudId)
+	}
+
+	return documentoIds, documentoSolicitudIds, nil
 }
 
 func getIdByCodigoAbreviacion(base, recurso, codigo string) (int, error) {
@@ -215,51 +307,6 @@ func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error
 
 	return 0, fmt.Errorf("respuesta inválida: no existe TerceroId en datos_identificacion")
 }
-
-/*func getUuidDocumentoDesdeApi(baseDocs string, documentoApiId int) (string, error) {
-	getURL := joinURL(baseDocs, fmt.Sprintf("/documento/%d", documentoApiId))
-
-	var rawResp interface{}
-	err := request.GetJson(getURL, &rawResp)
-	if err != nil {
-		return "", err
-	}
-
-	var obj map[string]interface{}
-	switch t := rawResp.(type) {
-	case map[string]interface{}:
-		if _, hasData := t["Data"]; hasData {
-			row, err := firstRowFromResponse(t)
-			if err != nil {
-				return "", err
-			}
-			obj = row
-		} else {
-			obj = t
-		}
-	default:
-		row, err := firstRowFromResponse(rawResp)
-		if err != nil {
-			return "", err
-		}
-		obj = row
-	}
-
-	var enlace string
-	if v, ok := obj["enlace"].(string); ok {
-		enlace = v
-	} else if v, ok := obj["Enlace"].(string); ok {
-		enlace = v
-	}
-
-	enlace = strings.TrimSpace(enlace)
-	if enlace == "" {
-		return "", fmt.Errorf("no se encontró campo enlace en documento")
-	}
-
-	return enlace, nil
-}
-*/
 
 func crearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
 	postURL := joinURL(baseCrud, "/documento_solicitud")
@@ -469,43 +516,4 @@ func extractId(resp map[string]interface{}) int {
 		return id
 	}
 	return 0
-}
-
-func cargarDocumentoDesdeBase64(baseDocs, base64Documento, nombreArchivo string) (int, error) {
-	postURL := joinURL(baseDocs, "/documento")
-	if err := validateAbsoluteURL(postURL); err != nil {
-		return 0, err
-	}
-
-	payload := map[string]interface{}{
-		"file":   strings.TrimSpace(base64Documento),
-		"nombre": strings.TrimSpace(nombreArchivo),
-	}
-
-	var postResp interface{}
-	err := request.SendJson(postURL, "POST", &postResp, payload)
-	if err != nil {
-		return 0, fmt.Errorf("error cargando documento al gestor documental: %v", err)
-	}
-
-	row, err := firstRowFromResponse(postResp)
-	if err != nil {
-		return 0, fmt.Errorf("respuesta inválida al cargar documento: %v", err)
-	}
-
-	if v, ok := row["Id"]; ok {
-		id, convErr := strconv.Atoi(fmt.Sprintf("%v", v))
-		if convErr == nil && id > 0 {
-			return id, nil
-		}
-	}
-
-	if v, ok := row["id"]; ok {
-		id, convErr := strconv.Atoi(fmt.Sprintf("%v", v))
-		if convErr == nil && id > 0 {
-			return id, nil
-		}
-	}
-
-	return 0, fmt.Errorf("no se pudo extraer el id del documento creado")
 }
