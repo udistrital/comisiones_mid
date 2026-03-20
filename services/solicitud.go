@@ -17,7 +17,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 		}
 	}()
 	terceros_url := "http://pruebasapi.intranetoas.udistrital.edu.co:8121/v1/"
-	comision_crud := "http://localhost:8080/v1/"
+	comision_crud := "https://pruebasapi.intranetoas.udistrital.edu.co/comisiones_crud/v1/"
 	// Llamar terceros para buscar datos
 	//Busqueda de datos del tercero por numero de documento
 	var persona []map[string]interface{}
@@ -77,15 +77,15 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 		}
 	}()
 
-	comision_crud := "http://localhost:8080/v1/"
+	comision_crud := "https://pruebasapi.intranetoas.udistrital.edu.co/comisiones_crud/v1/"
 
 	var persona map[string]interface{}
-
+	fmt.Println("ENTRA A SERVICIO ", comision_crud+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", identificacion))
 	if response, err := helpers.GetJsonTest(
 		comision_crud+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", identificacion),
 		&persona,
 	); err == nil && response == 200 {
-
+		fmt.Println("ENTRA A SERVICIO 2 ", persona)
 		// 🔥 acceder a Data
 		if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {
 
