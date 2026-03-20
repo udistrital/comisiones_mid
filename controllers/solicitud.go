@@ -141,10 +141,11 @@ func (c *SolicitudController) SolicitudByIdentificacion() {
 		if err := recover(); err != nil {
 			logs.Error(err)
 			localError := err.(map[string]interface{})
-			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "SolicitudByIdentificacion" + "/" + (localError["funcion"]).(string))
+			fmt.Println("ERROR ", localError)
+			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "SolicitudByIdentificacion" + "/" + (localError["error"]).(string))
 			c.Data["data"] = (localError["err"])
 			if status, ok := localError["status"]; ok {
-				c.Abort(status.(string))
+				c.Abort(strconv.Itoa(status.(int)))
 			} else {
 				c.Abort("404")
 			}
