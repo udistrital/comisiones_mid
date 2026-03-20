@@ -1,7 +1,7 @@
 package models
 
 type DetalleSolicitud struct {
-	SolicitudId *SolicitudInicial
+	SolicitudId *Solicitud
 	Formulario  string
 	Activo      bool
 }
