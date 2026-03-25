@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"encoding/json"
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/models"
 )
@@ -51,4 +52,42 @@ func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resulta
 	}
 
 	return resultado, outputError
+}
+
+func ObtenerDatosFormulario(detalleSolicitud map[string]interface{}) (datos models.Formulario, outputError map[string]interface{}) {
+	defer func() {
+		if err := recover(); err != nil {
+			outputError = map[string]interface{}{
+				"funcion": "/ObtenerDatosFormulario",
+				"err":     err,
+				"status":  "404",
+			}
+			panic(outputError)
+		}
+	}()
+
+	if data, ok := detalleSolicitud["Data"].([]interface{}); ok && len(data) > 0 {
+		if itemMap, ok := data[0].(map[string]interface{}); ok {
+			if formularioStr, ok := itemMap["Formulario"].(string); ok {
+
+				if err := json.Unmarshal([]byte(formularioStr), &datos); err != nil {
+					outputError = map[string]interface{}{
+						"funcion": "/ObtenerDatosFormulario",
+						"err":     err.Error(),
+						"status":  "404",
+					}
+					return datos, outputError
+				}
+
+				return datos, nil
+			}
+		}
+	}
+
+	outputError = map[string]interface{}{
+		"funcion": "/ObtenerDatosFormulario",
+		"err":     "no se encontró la información de Formulario",
+		"status":  "404",
+	}
+	return datos, outputError
 }

@@ -1,19 +1,28 @@
 package models
 
-type SolicitudInicial struct {
-	Id              int
-	TerceroId       int
-	TipoSolicitudId *TipoSolicitud
-	Activo          bool
+type Solicitud struct {
+	Id                int            `json:"Id"`
+	TerceroId         int            `json:"TerceroId"`
+	TipoSolicitudId   *TipoSolicitud `json:"TipoSolicitudId"`
+	ComisionId        *Comision      `json:"ComisionId"`
+	ObservacionCierre string         `json:"ObservacionCierre"`
+	Activo            bool           `json:"Activo"`
+	FechaCreacion     string         `json:"FechaCreacion"`
+	FechaModificacion string         `json:"FechaModificacion"`
 }
 
-type TipoSolicitud struct {
-	Id int
+type SolicitudCreateRequest struct {
+	Id                int          `json:"Id"`
+	TerceroId         int          `json:"TerceroId"`
+	TipoSolicitudId   IdReference  `json:"TipoSolicitudId"`
+	ComisionId        *IdReference `json:"ComisionId"`
+	ObservacionCierre string       `json:"ObservacionCierre"`
+	Activo            bool         `json:"Activo"`
 }
 
 type ResponseSolicitud struct {
-	Data    SolicitudInicial `json:"Data"`
-	Message string           `json:"Message"`
-	Status  string           `json:"Status"`
-	Success bool             `json:"Success"`
+	Data    Solicitud `json:"Data"`
+	Message string    `json:"Message"`
+	Status  string    `json:"Status"`
+	Success bool      `json:"Success"`
 }
