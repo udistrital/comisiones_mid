@@ -1,56 +1,34 @@
 package services
 
 import (
-	"encoding/xml"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
-
-type CoordinadoresXML struct {
-	XMLName       xml.Name         `xml:"coordinadores"`
-	Coordinadores []CoordinadorXML `xml:"coordinador"`
-}
-
-type CoordinadorXML struct {
-	NombreCoordinador string `xml:"coordinador"`
-	CodigoCarrera     string `xml:"codigo_carrera"`
-	Identificacion    string `xml:"identificacion"`
-	NombreCarrera     string `xml:"nombre_carrera"`
-}
-
-type secretariaXML struct {
-	XMLName xml.Name     `xml:"secretaria"`
-	Persona []personaXML `xml:"persona"`
-}
-
-type personaXML struct {
-	Apellidos         string `xml:"apellidos"`
-	Estado            string `xml:"estado"`
-	Identificacion    string `xml:"identificacion"`
-	Dependencia       string `xml:"dependencia"`
-	CodigoDependencia string `xml:"codigo_dependencia"`
-	Nombres           string `xml:"nombres"`
-}
 
 func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]models.SolicitudPendienteRevisor, error) {
 	if strings.TrimSpace(numeroIdentificacion) == "" {
 		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
 	}
 
-	baseCrud, err := getBaseURL("UrlComisionesCrud", "COMISIONES_MID_COMISIONES_CRUD")
-	if err != nil {
-		return nil, err
+	// CRUD comisiones
+	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
+	logs.Info("UrlComisionesCrud=%q", baseCrud)
+	if baseCrud == "" {
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlComisionesCrud")
 	}
 
-	urlCoordinador, err := getBaseURL("UrlJBPM", "COMISONES_MID_ACADEMICA_JBPM")
-	if err != nil {
-		return nil, err
+	urlCoordinador := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
+	logs.Info("UrlJBPM=%q", urlCoordinador)
+	if urlCoordinador == "" {
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlJBPM")
 	}
 	urlCoordinador = strings.TrimRight(urlCoordinador, "/") + "/coordinador_usuario/"
 
@@ -118,7 +96,7 @@ func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]mod
 func obtenerProyectoCurricularCoordinador(baseURL, numeroIdentificacion string) (string, error) {
 	urlFinal := strings.TrimRight(baseURL, "/") + "/" + strings.TrimSpace(numeroIdentificacion)
 
-	var resp CoordinadoresXML
+	var resp models.CoordinadoresXML
 	if err := request.GetXml(urlFinal, &resp); err != nil {
 		return "", err
 	}
@@ -140,14 +118,17 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
 	}
 
-	baseCrud, err := getBaseURL("UrlComisionesCrud", "COMISIONES_MID_COMISIONES_CRUD")
-	if err != nil {
-		return nil, err
+	// CRUD comisiones
+	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
+	logs.Info("UrlComisionesCrud=%q", baseCrud)
+	if baseCrud == "" {
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlComisionesCrud")
 	}
 
-	urlSecretaria, err := getBaseURL("UrlJBPM", "COMISONES_MID_ACADEMICA_JBPM")
-	if err != nil {
-		return nil, err
+	urlSecretaria := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
+	logs.Info("UrlJBPM=%q", urlSecretaria)
+	if urlSecretaria == "" {
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlJBPM")
 	}
 	urlSecretaria = strings.TrimRight(urlSecretaria, "/") + "/secretaria_academica/"
 
@@ -216,7 +197,7 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 func obtenerDependenciaSecretaria(baseURL, numeroIdentificacion string) (string, error) {
 	urlFinal := strings.TrimRight(baseURL, "/") + "/" + strings.TrimSpace(numeroIdentificacion)
 
-	var resp secretariaXML
+	var resp models.SecretariaXML
 
 	if err := request.GetXml(urlFinal, &resp); err != nil {
 		return "", err
@@ -235,7 +216,7 @@ func obtenerDependenciaSecretaria(baseURL, numeroIdentificacion string) (string,
 }
 
 func consultarSolicitudesPorEstado(baseCrud, codigoEstado string) ([]map[string]interface{}, error) {
-	u, err := url.Parse(joinURL(baseCrud, "/historico_estado_solicitud"))
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/historico_estado_solicitud"))
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +251,7 @@ func consultarSolicitudesPorEstado(baseCrud, codigoEstado string) ([]map[string]
 }
 
 func obtenerDetalleSolicitud(baseCrud string, solicitudId int) (map[string]interface{}, error) {
-	u, err := url.Parse(joinURL(baseCrud, "/detalle_solicitud"))
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/detalle_solicitud"))
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/utils_oas/request"
 )
 
@@ -17,8 +18,8 @@ func CrearObservacion(baseCrud string, historicoEstadoSolicitudId int, descripci
 		return 0, fmt.Errorf("la descripcion de la observación es obligatoria")
 	}
 
-	postURL := joinURL(baseCrud, "/observacion")
-	if err := validateAbsoluteURL(postURL); err != nil {
+	postURL := helpers.JoinURL(baseCrud, "/observacion")
+	if err := helpers.ValidateAbsoluteURL(postURL); err != nil {
 		return 0, err
 	}
 
@@ -33,7 +34,7 @@ func CrearObservacion(baseCrud string, historicoEstadoSolicitudId int, descripci
 		return 0, fmt.Errorf("error creando observación: %v", err)
 	}
 
-	observacionId := extractId(postResp)
+	observacionId := helpers.ExtractIdAtoi(postResp)
 	if observacionId <= 0 {
 		return 0, fmt.Errorf("se creó la observación pero no se pudo extraer su Id")
 	}
