@@ -48,10 +48,11 @@ func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]mod
 		return nil, err
 	}
 
-	urlCoordinador, err := getBaseURL("UrlCoordinadorUsuario", "COMISIONES_MID_COORDINADOR_USUARIO")
+	urlCoordinador, err := getBaseURL("UrlJBPM", "COMISONES_MID_ACADEMICA_JBPM")
 	if err != nil {
 		return nil, err
 	}
+	urlCoordinador = strings.TrimRight(urlCoordinador, "/") + "/coordinador_usuario/"
 
 	proyectoCoordinador, err := obtenerProyectoCurricularCoordinador(urlCoordinador, numeroIdentificacion)
 	if err != nil {
@@ -144,10 +145,11 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 		return nil, err
 	}
 
-	urlSecretaria, err := getBaseURL("UrlSecretariaAcademica", "COMISIONES_MID_SECRETARIA_ACADEMICA")
+	urlSecretaria, err := getBaseURL("UrlJBPM", "COMISONES_MID_ACADEMICA_JBPM")
 	if err != nil {
 		return nil, err
 	}
+	urlSecretaria = strings.TrimRight(urlSecretaria, "/") + "/secretaria_academica/"
 
 	dependenciaSecretaria, err := obtenerDependenciaSecretaria(urlSecretaria, numeroIdentificacion)
 	if err != nil {
