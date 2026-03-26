@@ -147,6 +147,26 @@ paths:
             $ref: '#/definitions/models.Solicitud'
         "403":
           description: body is empty
+  /solicitud/detalles_solicitud/{id}:
+    get:
+      tags:
+      - solicitud
+      description: search Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
   /solicitud/estados:
     post:
       tags:
@@ -167,6 +187,10 @@ paths:
             $ref: '#/definitions/map[string]interface{}'
         "400":
           description: bad request
+<<<<<<< feature/ajuste_funciones_solicitud
+  /solicitud/prueba_documento:
+    post:
+=======
   /solicitud/pendientes_coordinador/{numero_identificacion}:
     get:
       tags:
@@ -188,6 +212,7 @@ paths:
           description: '{object} map[string]interface{}'
   /solicitud/pendientes_secretaria/{numero_identificacion}:
     get:
+>>>>>>> develop
       tags:
       - solicitud
       description: Retorna las solicitudes pendientes por revisar de la secretaria academica según su número de identificación
@@ -281,6 +306,20 @@ definitions:
     title: TipoSolicitud
     type: object
     properties:
+<<<<<<< feature/ajuste_funciones_solicitud
+      CodigoAbreviacion:
+        type: string
       Id:
         type: integer
         format: int64
+      Nombre:
+        type: string
+tags:
+- name: solicitud
+  description: |
+    SolicitudController operations for Solicitud
+=======
+      Id:
+        type: integer
+        format: int64
+>>>>>>> develop

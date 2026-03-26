@@ -26,13 +26,10 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 				if id_tercero, ok := tercero["Id"].(float64); ok {
 					var respuesta_request models.SolicitudCreateRequest
 					respuesta_request.TerceroId = int(id_tercero)
-					fmt.Println("ENTRA A ASGINAR")
 					respuesta_request.Activo = true
 					respuesta_request.TipoSolicitudId = models.IdReference{
 						Id: solicitud.TipoSolicitudId,
 					}
-					fmt.Println("respuesta ", respuesta_request)
-					fmt.Println("tipo solicitud ", respuesta_request.TipoSolicitudId)
 					var respuesta_creacion map[string]interface{}
 					if err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"/solicitud", "POST", &respuesta_creacion, &respuesta_request); err == nil {
 						fmt.Println("response", respuesta_creacion)
@@ -232,4 +229,156 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 		"error":  "no se encontró solicitud",
 		"status": 404,
 	}
+}
+
+func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetalles, outputError map[string]interface{}) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			outputError = map[string]interface{}{
+				"funcion": "/BuscarSolicitudIdentificacion",
+				"err":     err,
+				"status":  "404",
+			}
+			panic(outputError)
+		}
+	}()
+
+	var respuesta_historico map[string]interface{}
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"historico_estado_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+
+			",Activo:true&sortby=FechaCreacion&order=desc&limit=-1",
+		&respuesta_historico,
+	)
+
+	if err != nil {
+		return respuesta, nil
+	}
+
+	data, ok := respuesta_historico["Data"].([]interface{})
+	if !ok || len(data) == 0 {
+		return models.SolicitudDetalles{}, map[string]interface{}{
+			"error":  "no se encontró solicitud",
+			"status": 404,
+		}
+	}
+
+	primer_registro, ok := data[0].(map[string]interface{})
+	if !ok {
+		return respuesta, nil
+	}
+
+	info_solicitud, ok := primer_registro["SolicitudId"].(map[string]interface{})
+	if !ok {
+		return respuesta, nil
+	}
+
+	if registro_tipo_solicitud, ok := info_solicitud["TipoSolicitudId"].(map[string]interface{}); ok {
+		tipo_solicitud_historico := models.TipoSolicitud{
+			Id:                int(registro_tipo_solicitud["Id"].(float64)),
+			Nombre:            fmt.Sprintf("%v", registro_tipo_solicitud["Nombre"]),
+			CodigoAbreviacion: fmt.Sprintf("%v", registro_tipo_solicitud["CodigoAbreviacion"]),
+		}
+
+		if estado_solicitud_actual, ok := primer_registro["EstadoSolicitudId"].(map[string]interface{}); ok {
+			estado_solicitud_info := models.EstadoSolicitud{
+				Id:                int(estado_solicitud_actual["Id"].(float64)),
+				Nombre:            fmt.Sprintf("%v", estado_solicitud_actual["Nombre"]),
+				Descripcion:       fmt.Sprintf("%v", estado_solicitud_actual["Descripcion"]),
+				CodigoAbreviacion: fmt.Sprintf("%v", estado_solicitud_actual["CodigoAbreviacion"]),
+			}
+			respuesta.EstadoSolicitud = &estado_solicitud_info
+		}
+
+		solicitud_historico := models.Solicitud{
+			Id:                int(info_solicitud["Id"].(float64)),
+			TerceroId:         int(info_solicitud["TerceroId"].(float64)),
+			TipoSolicitudId:   &tipo_solicitud_historico,
+			ObservacionCierre: fmt.Sprintf("%v", info_solicitud["ObservacionCierre"]),
+			Activo:            info_solicitud["Activo"].(bool),
+		}
+		respuesta.Solicitud = &solicitud_historico
+	}
+
+	var respuesta_detalle_formulario map[string]interface{}
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud),
+		&respuesta_detalle_formulario,
+	); err == nil {
+
+		if data_formulario, ok := respuesta_detalle_formulario["Data"].([]interface{}); ok && len(data_formulario) > 0 {
+			if registro_formulario, ok := data_formulario[0].(map[string]interface{}); ok {
+				respuesta.Formulario = registro_formulario["Formulario"]
+			}
+		}
+	}
+
+	var respuesta_documentos map[string]interface{}
+
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud),
+		&respuesta_documentos,
+	); err == nil {
+
+		if data_documentos, ok := respuesta_documentos["Data"].([]interface{}); ok && len(data_documentos) > 0 {
+
+			for _, doc := range data_documentos {
+				if documento, ok := doc.(map[string]interface{}); ok {
+
+					docId := int(documento["DocumentoId"].(float64))
+
+					var detalle_doc map[string]interface{}
+					if err := request.GetJson(
+						beego.AppConfig.String("UrlDocumentos")+"documento/"+fmt.Sprintf("%d", docId),
+						&detalle_doc,
+					); err == nil {
+
+						if len(detalle_doc) == 0 {
+							continue
+						}
+
+						nombre, _ := detalle_doc["Nombre"].(string)
+						enlace, _ := detalle_doc["Enlace"].(string)
+
+						// TipoDocumento
+						var tipo *models.TipoDocumentoSolicitud
+						if tipoDoc, ok := documento["TipoDocumentoId"].(map[string]interface{}); ok {
+							tipo = &models.TipoDocumentoSolicitud{
+								Id:                int(tipoDoc["Id"].(float64)),
+								Nombre:            fmt.Sprintf("%v", tipoDoc["Nombre"]),
+								Descripcion:       fmt.Sprintf("%v", tipoDoc["Descripcion"]),
+								CodigoAbreviacion: fmt.Sprintf("%v", tipoDoc["CodigoAbreviacion"]),
+							}
+						}
+
+						// EstadoDocumento
+						var estado *models.EstadoDocumento
+						if estadoDoc, ok := documento["EstadoDocumentoId"].(map[string]interface{}); ok {
+							estado = &models.EstadoDocumento{
+								Id:                int(estadoDoc["Id"].(float64)),
+								Nombre:            fmt.Sprintf("%v", estadoDoc["Nombre"]),
+								Descripcion:       fmt.Sprintf("%v", estadoDoc["Descripcion"]),
+								CodigoAbreviacion: fmt.Sprintf("%v", estadoDoc["CodigoAbreviacion"]),
+							}
+						}
+
+						if nombre != "" && enlace != "" {
+							documento_aux := models.DocumentoDetalle{
+								Nombre: nombre,
+								Enlace: enlace,
+								Tipo:   tipo,
+								Estado: estado,
+							}
+
+							respuesta.Documentos = append(respuesta.Documentos, documento_aux)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return respuesta, nil
 }
