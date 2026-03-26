@@ -1,9 +1,10 @@
 package models
 
 type SolicitudDetalles struct {
-	Solicitud  *Solicitud
-	Formulario interface{}
-	Documentos *DocumentoDetalle
+	Solicitud  			*Solicitud
+	EstadoSolicitud 	*EstadoSolicitud
+	Formulario 			interface{}
+	Documentos 			[]DocumentoDetalle
 }
 
 type DocumentoDetalle struct{
