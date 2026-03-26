@@ -23,7 +23,7 @@ func (c *SolicitudController) URLMapping() {
 	c.Mapping("crear_solicitud", c.CrearSolicitud)
 	c.Mapping("prueba_documento", c.PruebaDocumento)
 	c.Mapping("solicitudes_by_identificacion", c.SolicitudByIdentificacion)
-	c.Mapping("detalles_solicitud", c.DetallesSolicitud)	
+	c.Mapping("detalles_solicitud", c.DetallesSolicitud)
 	c.Mapping("Post", c.Post)
 	c.Mapping("GetOne", c.GetOne)
 	c.Mapping("GetAll", c.GetAll)

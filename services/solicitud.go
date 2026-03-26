@@ -231,7 +231,6 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 	}
 }
 
-
 func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetalles, outputError map[string]interface{}) {
 
 	defer func() {
@@ -383,4 +382,3 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 
 	return respuesta, nil
 }
-

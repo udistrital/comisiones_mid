@@ -147,6 +147,26 @@ paths:
             $ref: '#/definitions/models.Solicitud'
         "403":
           description: body is empty
+  /solicitud/detalles_solicitud/{id}:
+    get:
+      tags:
+      - solicitud
+      description: search Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
   /solicitud/estados:
     post:
       tags:
@@ -168,7 +188,7 @@ paths:
         "400":
           description: bad request
   /solicitud/prueba_documento:
-    get:
+    post:
       tags:
       - solicitud
       description: prueba creación documento
@@ -178,13 +198,78 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/map[string]interface{}'
+  /solicitud/solicitudes_by_identificacion/{id}:
+    get:
+      tags:
+      - solicitud
+      description: search Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
 definitions:
   map[string]interface{}:
     title: map[string]interface{}
     type: object
+  models.Comision:
+    title: Comision
+    type: object
+    properties:
+      Activo:
+        type: boolean
+      Descripcion:
+        type: string
+      FechaCreacion:
+        type: string
+      FechaModificacion:
+        type: string
+      Id:
+        type: integer
+        format: int64
   models.Solicitud:
     title: Solicitud
     type: object
+    properties:
+      Activo:
+        type: boolean
+      ComisionId:
+        $ref: '#/definitions/models.Comision'
+      FechaCreacion:
+        type: string
+      FechaModificacion:
+        type: string
+      Id:
+        type: integer
+        format: int64
+      ObservacionCierre:
+        type: string
+      TerceroId:
+        type: integer
+        format: int64
+      TipoSolicitudId:
+        $ref: '#/definitions/models.TipoSolicitud'
+  models.TipoSolicitud:
+    title: TipoSolicitud
+    type: object
+    properties:
+      CodigoAbreviacion:
+        type: string
+      Id:
+        type: integer
+        format: int64
+      Nombre:
+        type: string
 tags:
 - name: solicitud
   description: |
