@@ -26,13 +26,10 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 				if id_tercero, ok := tercero["Id"].(float64); ok {
 					var respuesta_request models.SolicitudCreateRequest
 					respuesta_request.TerceroId = int(id_tercero)
-					fmt.Println("ENTRA A ASGINAR")
 					respuesta_request.Activo = true
 					respuesta_request.TipoSolicitudId = models.IdReference{
 						Id: solicitud.TipoSolicitudId,
 					}
-					fmt.Println("respuesta ", respuesta_request)
-					fmt.Println("tipo solicitud ", respuesta_request.TipoSolicitudId)
 					var respuesta_creacion map[string]interface{}
 					if err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"/solicitud", "POST", &respuesta_creacion, &respuesta_request); err == nil {
 						fmt.Println("response", respuesta_creacion)
