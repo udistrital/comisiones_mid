@@ -233,3 +233,62 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 		"status": 404,
 	}
 }
+
+
+func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetalles, outputError map[string]interface{}) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			outputError = map[string]interface{}{
+				"funcion": "/BuscarSolicitudIdentificacion",
+				"err":     err,
+				"status":  "404",
+			}
+			panic(outputError)
+		}
+	}()
+
+	fmt.Println("ENTRA A DETALLE SOLICITUD")
+	var respuesta_historico map[string]interface{}
+	if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"historico_estado_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+"&sortby=FechaCreacion&order=desc&limit=-1", &respuesta_historico); err == nil {
+		if data, ok := respuesta_historico["Data"].([]interface{}); ok && len(data) > 0 {
+			if primer_registro, ok := data[0].(map[string]interface{}); ok {
+				if info_solicitud, ok := primer_registro["SolicitudId"].(map[string]interface{}); ok {
+					if registro_tipo_solicitud, ok := info_solicitud["TipoSolicitudId"].(map[string]interface{}); ok{
+						tipo_solicitud_historico := models.TipoSolicitud{
+							Id:                int(registro_tipo_solicitud["Id"].(float64)),
+							Nombre:            fmt.Sprintf("%v", registro_tipo_solicitud["Nombre"]),
+							CodigoAbreviacion: fmt.Sprintf("%v", registro_tipo_solicitud["CodigoAbreviacion"]),
+						}
+						solicitud_historico := models.Solicitud{
+							Id:                int(info_solicitud["Id"].(float64)),
+							TerceroId:         int(info_solicitud["TerceroId"].(float64)),
+							TipoSolicitudId:   &tipo_solicitud_historico,
+							ObservacionCierre: fmt.Sprintf("%v", info_solicitud["ObservacionCierre"]),
+							Activo:            info_solicitud["Activo"].(bool),
+						}
+						respuesta.Solicitud = &solicitud_historico
+						var respuesta_detalle_formulario map[string]interface{}
+						if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud), &respuesta_detalle_formulario); err == nil {
+							if data_formulario, ok := respuesta_detalle_formulario["Data"].([]interface{}); ok && len(data) > 0 {
+								if registro_formulario, ok := data_formulario[0].(map[string]interface{}); ok {
+									fmt.Println(registro_formulario)
+									respuesta.Formulario = registro_formulario["Formulario"]
+								}
+							}
+						}
+						return respuesta, nil
+					}
+
+				}
+			}
+		}
+	}
+	
+	
+	return models.SolicitudDetalles{}, map[string]interface{}{
+		"error":  "no se encontró solicitud",
+		"status": 404,
+	}
+}
+
