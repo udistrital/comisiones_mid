@@ -145,7 +145,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 					id_tercero_busqueda := int(id_tercero)
 
 					fmt.Println("ENTRA A SERVICIO ", beego.AppConfig.String("UrlComisionesCrud")+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda)+"&limit=-1")
-					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
+					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
 						&persona); err == nil {
 						fmt.Println("ENTRA A SERVICIO 2 ", persona)
 						if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {

@@ -117,7 +117,6 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 	if strings.TrimSpace(numeroIdentificacion) == "" {
 		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
 	}
-
 	// CRUD comisiones
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	logs.Info("UrlComisionesCrud=%q", baseCrud)
@@ -189,9 +188,7 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 			EstadoSolicitud:  estadoSolicitud,
 		})
 	}
-
 	return resultado, nil
-
 }
 
 func obtenerDependenciaSecretaria(baseURL, numeroIdentificacion string) (string, error) {
