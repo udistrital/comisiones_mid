@@ -195,6 +195,69 @@
                 }
             }
         },
+<<<<<<< feature/ajuste_funciones_solicitud
+        "/solicitud/prueba_documento": {
+            "post": {
+=======
+        "/solicitud/pendientes_coordinador/{numero_identificacion}": {
+            "get": {
+                "tags": [
+                    "solicitud"
+                ],
+                "description": "Retorna las solicitudes pendientes por revisar de un coordinador según su número de identificación",
+                "operationId": "SolicitudPendienteCoordinadorController.Get Solicitudes Pendientes Coordinador",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "numero_identificacion",
+                        "description": "Número de identificación del coordinador",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/solicitud/pendientes_secretaria/{numero_identificacion}": {
+            "get": {
+>>>>>>> develop
+                "tags": [
+                    "solicitud"
+                ],
+                "description": "Retorna las solicitudes pendientes por revisar de la secretaria academica según su número de identificación",
+                "operationId": "SolicitudPendienteSecretariaController.Get Solicitudes Pendientes Secretaria",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "numero_identificacion",
+                        "description": "Número de identificación del secretario(a)",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
         "/solicitud/prueba_documento": {
             "post": {
                 "tags": [
@@ -396,6 +459,7 @@
             "title": "TipoSolicitud",
             "type": "object",
             "properties": {
+<<<<<<< feature/ajuste_funciones_solicitud
                 "CodigoAbreviacion": {
                     "type": "string"
                 },
@@ -413,6 +477,13 @@
         {
             "name": "solicitud",
             "description": "SolicitudController operations for Solicitud\n"
+=======
+                "Id": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+>>>>>>> develop
         }
-    ]
+    }
 }

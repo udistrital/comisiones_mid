@@ -3,7 +3,6 @@ package services
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
@@ -29,17 +28,17 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	}
 
 	// CRUD comisiones
-	baseCrud, err := getBaseURL("UrlComisionesCrud", "COMISIONES_MID_V1_COMISIONES_CRUD")
-	logs.Info("UrlComisionesCrud=%q", beego.AppConfig.String("UrlComisionesCrud"))
-	if err != nil {
-		return models.CambioEstadoSolicitudResponse{}, err
+	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
+	logs.Info("UrlComisionesCrud=%q", baseCrud)
+	if baseCrud == "" {
+		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no está configurado UrlComisionesCrud")
 	}
 
 	// CRUD terceros
-	baseTerceros, err := getBaseURL("UrlTercerosCrud", "COMISIONES_MID_V1_TERCEROS")
-	logs.Info("UrlTercerosCrud=%q", beego.AppConfig.String("UrlTercerosCrud"))
-	if err != nil {
-		return models.CambioEstadoSolicitudResponse{}, err
+	baseTerceros := strings.TrimSpace(beego.AppConfig.String("UrlTercerosCrud"))
+	logs.Info("UrlTercerosCrud=%q", baseTerceros)
+	if baseTerceros == "" {
+		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no está configurado UrlTercerosCrud")
 	}
 
 	estadoDestinoId, err := getIdByCodigoAbreviacion(baseCrud, "estado_solicitud", req.NuevoEstado)
@@ -88,8 +87,8 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		"Activo":            true,
 	}
 
-	postHistoricoURL := joinURL(baseCrud, "/historico_estado_solicitud")
-	if err := validateAbsoluteURL(postHistoricoURL); err != nil {
+	postHistoricoURL := helpers.JoinURL(baseCrud, "/historico_estado_solicitud")
+	if err := helpers.ValidateAbsoluteURL(postHistoricoURL); err != nil {
 		return models.CambioEstadoSolicitudResponse{}, err
 	}
 
@@ -100,7 +99,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	}
 
 	resp.CrudResponse = postHistoricoResp
-	resp.HistoricoNuevoId = extractId(postHistoricoResp)
+	resp.HistoricoNuevoId = helpers.ExtractIdAtoi(postHistoricoResp)
 	if resp.HistoricoNuevoId <= 0 {
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("se creó el histórico pero no se pudo extraer su Id de la respuesta del CRUD")
 	}
@@ -245,7 +244,7 @@ func crearDocumentosSolicitudMultiples(
 }
 
 func getIdByCodigoAbreviacion(base, recurso, codigo string) (int, error) {
-	u, err := url.Parse(joinURL(base, "/"+recurso))
+	u, err := url.Parse(helpers.JoinURL(base, "/"+recurso))
 	if err != nil {
 		return 0, err
 	}
@@ -276,7 +275,7 @@ func getIdByCodigoAbreviacion(base, recurso, codigo string) (int, error) {
 }
 
 func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error) {
-	u, err := url.Parse(joinURL(baseTerceros, "/datos_identificacion"))
+	u, err := url.Parse(helpers.JoinURL(baseTerceros, "/datos_identificacion"))
 	if err != nil {
 		return 0, err
 	}
@@ -292,7 +291,7 @@ func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error
 		return 0, err
 	}
 
-	row, err := firstRowFromResponse(rawResp)
+	row, err := helpers.FirstRowFromResponse(rawResp)
 	if err != nil {
 		return 0, err
 	}
@@ -309,8 +308,8 @@ func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error
 }
 
 func crearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
-	postURL := joinURL(baseCrud, "/documento_solicitud")
-	if err := validateAbsoluteURL(postURL); err != nil {
+	postURL := helpers.JoinURL(baseCrud, "/documento_solicitud")
+	if err := helpers.ValidateAbsoluteURL(postURL); err != nil {
 		return 0, err
 	}
 
@@ -333,12 +332,12 @@ func crearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocum
 		return 0, fmt.Errorf("error creando documento_solicitud: %v", err)
 	}
 
-	id = extractId(postResp)
+	id = helpers.ExtractIdAtoi(postResp)
 	return id, nil
 }
 
 func getHistoricoActivoActual(base string, solicitudId int) (map[string]interface{}, error) {
-	u, err := url.Parse(joinURL(base, "/historico_estado_solicitud"))
+	u, err := url.Parse(helpers.JoinURL(base, "/historico_estado_solicitud"))
 	if err != nil {
 		return nil, err
 	}
@@ -378,8 +377,8 @@ func getHistoricoActivoActual(base string, solicitudId int) (map[string]interfac
 }
 
 func desactivarHistorico(base string, historicoId int) error {
-	getURL := joinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
-	if err := validateAbsoluteURL(getURL); err != nil {
+	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
 	}
 
@@ -389,7 +388,7 @@ func desactivarHistorico(base string, historicoId int) error {
 		return fmt.Errorf("error GET histórico: %v", err)
 	}
 
-	obj := unwrapDataToMap(getResp)
+	obj := helpers.UnwrapDataToMap(getResp)
 	if obj == nil {
 		return fmt.Errorf("respuesta inválida al GET del histórico %d: %v", historicoId, getResp)
 	}
@@ -403,117 +402,4 @@ func desactivarHistorico(base string, historicoId int) error {
 	}
 
 	return nil
-}
-
-func firstRowFromResponse(raw interface{}) (map[string]interface{}, error) {
-	if m, ok := raw.(map[string]interface{}); ok {
-		if d, ok := m["Data"]; ok {
-			switch dd := d.(type) {
-			case []interface{}:
-				if len(dd) == 0 {
-					return nil, fmt.Errorf("respuesta sin datos")
-				}
-				row, ok := dd[0].(map[string]interface{})
-				if !ok {
-					return nil, fmt.Errorf("Data[0] no es objeto")
-				}
-				return row, nil
-			case map[string]interface{}:
-				return dd, nil
-			default:
-				return nil, fmt.Errorf("formato Data no soportado: %T", d)
-			}
-		}
-		return m, nil
-	}
-
-	if arr, ok := raw.([]interface{}); ok {
-		if len(arr) == 0 {
-			return nil, fmt.Errorf("respuesta sin datos")
-		}
-		row, ok := arr[0].(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("[0] no es objeto")
-		}
-		return row, nil
-	}
-
-	return nil, fmt.Errorf("formato de respuesta no soportado: %T", raw)
-}
-
-func getBaseURL(appKey, envKey string) (string, error) {
-	v := strings.TrimSpace(beego.AppConfig.String(appKey))
-	if v == "" || strings.Contains(v, "${") {
-		v = strings.TrimSpace(os.Getenv(envKey))
-	}
-	if v == "" {
-		return "", fmt.Errorf("no está configurado %s ni %s", appKey, envKey)
-	}
-	if !strings.HasPrefix(v, "http://") && !strings.HasPrefix(v, "https://") {
-		v = "http://" + v
-	}
-	return strings.TrimRight(strings.TrimSpace(v), "/"), nil
-}
-
-func joinURL(base, path string) string {
-	return strings.TrimRight(base, "/") + "/" + strings.TrimLeft(path, "/")
-}
-
-func validateAbsoluteURL(u string) error {
-	parsed, err := url.Parse(u)
-	if err != nil {
-		return fmt.Errorf("URL inválida: %v", err)
-	}
-	if parsed.Scheme == "" || parsed.Host == "" {
-		return fmt.Errorf("URL inválida (sin scheme/host): %s", u)
-	}
-	return nil
-}
-
-func unwrapDataToMap(resp map[string]interface{}) map[string]interface{} {
-	if resp == nil {
-		return nil
-	}
-	if raw, ok := resp["Data"]; ok {
-		switch d := raw.(type) {
-		case []interface{}:
-			if len(d) > 0 {
-				if m, ok := d[0].(map[string]interface{}); ok {
-					return m
-				}
-			}
-		case map[string]interface{}:
-			return d
-		}
-	}
-	if _, ok := resp["Id"]; ok {
-		return resp
-	}
-	return nil
-}
-
-func extractId(resp map[string]interface{}) int {
-	if resp == nil {
-		return 0
-	}
-	if raw, ok := resp["Data"]; ok {
-		switch d := raw.(type) {
-		case map[string]interface{}:
-			if id, err := strconv.Atoi(fmt.Sprintf("%v", d["Id"])); err == nil {
-				return id
-			}
-		case []interface{}:
-			if len(d) > 0 {
-				if m, ok := d[0].(map[string]interface{}); ok {
-					if id, err := strconv.Atoi(fmt.Sprintf("%v", m["Id"])); err == nil {
-						return id
-					}
-				}
-			}
-		}
-	}
-	if id, err := strconv.Atoi(fmt.Sprintf("%v", resp["Id"])); err == nil {
-		return id
-	}
-	return 0
 }

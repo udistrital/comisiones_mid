@@ -18,6 +18,8 @@ func init() {
 		beego.NSNamespace("/solicitud",
 			beego.NSInclude(
 				&controllers.SolicitudController{},
+				&controllers.SolicitudPendienteCoordinadorController{},
+				&controllers.SolicitudPendienteSecretariaController{},
 			),
 		),
 	)

@@ -3,26 +3,9 @@ package helpers
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
-
-	"github.com/astaxie/beego"
 )
-
-func GetBaseURL(appKey, envKey string) (string, error) {
-	v := strings.TrimSpace(beego.AppConfig.String(appKey))
-	if v == "" || strings.Contains(v, "${") {
-		v = strings.TrimSpace(os.Getenv(envKey))
-	}
-	if v == "" {
-		return "", fmt.Errorf("no está configurado %s ni %s", appKey, envKey)
-	}
-	if !strings.HasPrefix(v, "http://") && !strings.HasPrefix(v, "https://") {
-		v = "http://" + v
-	}
-	return strings.TrimRight(strings.TrimSpace(v), "/"), nil
-}
 
 func JoinURL(base, path string) string {
 	return strings.TrimRight(base, "/") + "/" + strings.TrimLeft(path, "/")
@@ -89,4 +72,40 @@ func ExtractIdAtoi(resp map[string]interface{}) int {
 		return id
 	}
 	return 0
+}
+
+func FirstRowFromResponse(raw interface{}) (map[string]interface{}, error) {
+	if m, ok := raw.(map[string]interface{}); ok {
+		if d, ok := m["Data"]; ok {
+			switch dd := d.(type) {
+			case []interface{}:
+				if len(dd) == 0 {
+					return nil, fmt.Errorf("respuesta sin datos")
+				}
+				row, ok := dd[0].(map[string]interface{})
+				if !ok {
+					return nil, fmt.Errorf("Data[0] no es objeto")
+				}
+				return row, nil
+			case map[string]interface{}:
+				return dd, nil
+			default:
+				return nil, fmt.Errorf("formato Data no soportado: %T", d)
+			}
+		}
+		return m, nil
+	}
+
+	if arr, ok := raw.([]interface{}); ok {
+		if len(arr) == 0 {
+			return nil, fmt.Errorf("respuesta sin datos")
+		}
+		row, ok := arr[0].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("[0] no es objeto")
+		}
+		return row, nil
+	}
+
+	return nil, fmt.Errorf("formato de respuesta no soportado: %T", raw)
 }
