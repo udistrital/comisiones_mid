@@ -147,6 +147,26 @@ paths:
             $ref: '#/definitions/models.Solicitud'
         "403":
           description: body is empty
+  /solicitud/detalles_solicitud/{id}:
+    get:
+      tags:
+      - solicitud
+      description: search Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
   /solicitud/estados:
     post:
       tags:
@@ -281,6 +301,10 @@ definitions:
     title: TipoSolicitud
     type: object
     properties:
+      CodigoAbreviacion:
+        type: string
       Id:
         type: integer
         format: int64
+      Nombre:
+        type: string
