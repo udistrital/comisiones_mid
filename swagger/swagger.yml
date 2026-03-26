@@ -167,8 +167,46 @@ paths:
             $ref: '#/definitions/map[string]interface{}'
         "400":
           description: bad request
-  /solicitud/prueba_documento:
+  /solicitud/pendientes_coordinador/{numero_identificacion}:
     get:
+      tags:
+      - solicitud
+      description: Retorna las solicitudes pendientes por revisar de un coordinador según su número de identificación
+      operationId: SolicitudPendienteCoordinadorController.Get Solicitudes Pendientes Coordinador
+      parameters:
+      - in: path
+        name: numero_identificacion
+        description: Número de identificación del coordinador
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+  /solicitud/pendientes_secretaria/{numero_identificacion}:
+    get:
+      tags:
+      - solicitud
+      description: Retorna las solicitudes pendientes por revisar de la secretaria academica según su número de identificación
+      operationId: SolicitudPendienteSecretariaController.Get Solicitudes Pendientes Secretaria
+      parameters:
+      - in: path
+        name: numero_identificacion
+        description: Número de identificación del secretario(a)
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+  /solicitud/prueba_documento:
+    post:
       tags:
       - solicitud
       description: prueba creación documento
@@ -178,14 +216,71 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/map[string]interface{}'
+  /solicitud/solicitudes_by_identificacion/{id}:
+    get:
+      tags:
+      - solicitud
+      description: search Solicitud
+      operationId: SolicitudController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Solicitud content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Solicitud'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Solicitud'
+        "403":
+          description: body is empty
 definitions:
   map[string]interface{}:
     title: map[string]interface{}
     type: object
+  models.Comision:
+    title: Comision
+    type: object
+    properties:
+      Activo:
+        type: boolean
+      Descripcion:
+        type: string
+      FechaCreacion:
+        type: string
+      FechaModificacion:
+        type: string
+      Id:
+        type: integer
+        format: int64
   models.Solicitud:
     title: Solicitud
     type: object
-tags:
-- name: solicitud
-  description: |
-    SolicitudController operations for Solicitud
+    properties:
+      Activo:
+        type: boolean
+      ComisionId:
+        $ref: '#/definitions/models.Comision'
+      FechaCreacion:
+        type: string
+      FechaModificacion:
+        type: string
+      Id:
+        type: integer
+        format: int64
+      ObservacionCierre:
+        type: string
+      TerceroId:
+        type: integer
+        format: int64
+      TipoSolicitudId:
+        $ref: '#/definitions/models.TipoSolicitud'
+  models.TipoSolicitud:
+    title: TipoSolicitud
+    type: object
+    properties:
+      Id:
+        type: integer
+        format: int64
