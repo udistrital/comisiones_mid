@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego/logs"
+	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/utils_oas/request"
 )
 
@@ -16,8 +17,8 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 1. Consultar la solicitud por id
-	getSolicitudURL := joinURL(baseCrud, fmt.Sprintf("/solicitud/%d", solicitudId))
-	if err := validateAbsoluteURL(getSolicitudURL); err != nil {
+	getSolicitudURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/solicitud/%d", solicitudId))
+	if err := helpers.ValidateAbsoluteURL(getSolicitudURL); err != nil {
 		return 0, err
 	}
 
@@ -26,7 +27,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 		return 0, fmt.Errorf("error consultando solicitud %d: %v", solicitudId, err)
 	}
 
-	solicitudObj := unwrapDataToMap(solicitudResp)
+	solicitudObj := helpers.UnwrapDataToMap(solicitudResp)
 	if solicitudObj == nil {
 		return 0, fmt.Errorf("respuesta inválida al consultar solicitud %d", solicitudId)
 	}
@@ -38,8 +39,8 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 3. Crear la comisión
-	postComisionURL := joinURL(baseCrud, "/comision")
-	if err := validateAbsoluteURL(postComisionURL); err != nil {
+	postComisionURL := helpers.JoinURL(baseCrud, "/comision")
+	if err := helpers.ValidateAbsoluteURL(postComisionURL); err != nil {
 		return 0, err
 	}
 
@@ -53,7 +54,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 		return 0, fmt.Errorf("error creando comisión: %v", err)
 	}
 
-	comisionId := extractId(postComisionResp)
+	comisionId := helpers.ExtractIdAtoi(postComisionResp)
 	if comisionId <= 0 {
 		return 0, fmt.Errorf("se creó la comisión pero no se pudo extraer su Id")
 	}
@@ -95,8 +96,8 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 8. Crear histórico inicial de comisión
-	postHistoricoURL := joinURL(baseCrud, "/historico_estado_comision")
-	if err := validateAbsoluteURL(postHistoricoURL); err != nil {
+	postHistoricoURL := helpers.JoinURL(baseCrud, "/historico_estado_comision")
+	if err := helpers.ValidateAbsoluteURL(postHistoricoURL); err != nil {
 		return comisionId, err
 	}
 
@@ -114,7 +115,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 		return comisionId, fmt.Errorf("la comisión fue creada y asociada, pero no se pudo crear el histórico inicial de comisión: %v", err)
 	}
 
-	historicoComisionId := extractId(postHistoricoResp)
+	historicoComisionId := helpers.ExtractIdAtoi(postHistoricoResp)
 	if historicoComisionId <= 0 {
 		return comisionId, fmt.Errorf("la comisión fue creada y asociada, pero no se pudo confirmar el Id del histórico de comisión")
 	}
@@ -128,7 +129,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 }
 
 func getFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error) {
-	u, err := url.Parse(joinURL(baseCrud, "/solicitud"))
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/solicitud"))
 	if err != nil {
 		return "", err
 	}
@@ -221,8 +222,8 @@ func confirmarHistoricoEstadoComision(baseCrud string, historicoComisionId int, 
 		return fmt.Errorf("historicoComisionId es obligatorio")
 	}
 
-	getURL := joinURL(baseCrud, fmt.Sprintf("/historico_estado_comision/%d", historicoComisionId))
-	if err := validateAbsoluteURL(getURL); err != nil {
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/historico_estado_comision/%d", historicoComisionId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
 	}
 
@@ -231,7 +232,7 @@ func confirmarHistoricoEstadoComision(baseCrud string, historicoComisionId int, 
 		return fmt.Errorf("error consultando histórico de comisión %d: %v", historicoComisionId, err)
 	}
 
-	obj := unwrapDataToMap(getResp)
+	obj := helpers.UnwrapDataToMap(getResp)
 	if obj == nil {
 		return fmt.Errorf("respuesta inválida al consultar histórico de comisión %d", historicoComisionId)
 	}
