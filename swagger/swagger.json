@@ -195,10 +195,6 @@
                 }
             }
         },
-<<<<<<< feature/ajuste_funciones_solicitud
-        "/solicitud/prueba_documento": {
-            "post": {
-=======
         "/solicitud/pendientes_coordinador/{numero_identificacion}": {
             "get": {
                 "tags": [
@@ -230,7 +226,6 @@
         },
         "/solicitud/pendientes_secretaria/{numero_identificacion}": {
             "get": {
->>>>>>> develop
                 "tags": [
                     "solicitud"
                 ],
@@ -459,7 +454,6 @@
             "title": "TipoSolicitud",
             "type": "object",
             "properties": {
-<<<<<<< feature/ajuste_funciones_solicitud
                 "CodigoAbreviacion": {
                     "type": "string"
                 },
@@ -471,19 +465,6 @@
                     "type": "string"
                 }
             }
-        }
-    },
-    "tags": [
-        {
-            "name": "solicitud",
-            "description": "SolicitudController operations for Solicitud\n"
-=======
-                "Id": {
-                    "type": "integer",
-                    "format": "int64"
-                }
-            }
->>>>>>> develop
         }
     }
 }

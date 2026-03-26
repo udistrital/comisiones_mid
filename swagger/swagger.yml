@@ -187,10 +187,6 @@ paths:
             $ref: '#/definitions/map[string]interface{}'
         "400":
           description: bad request
-<<<<<<< feature/ajuste_funciones_solicitud
-  /solicitud/prueba_documento:
-    post:
-=======
   /solicitud/pendientes_coordinador/{numero_identificacion}:
     get:
       tags:
@@ -212,7 +208,6 @@ paths:
           description: '{object} map[string]interface{}'
   /solicitud/pendientes_secretaria/{numero_identificacion}:
     get:
->>>>>>> develop
       tags:
       - solicitud
       description: Retorna las solicitudes pendientes por revisar de la secretaria academica según su número de identificación
@@ -306,7 +301,6 @@ definitions:
     title: TipoSolicitud
     type: object
     properties:
-<<<<<<< feature/ajuste_funciones_solicitud
       CodigoAbreviacion:
         type: string
       Id:
@@ -314,12 +308,3 @@ definitions:
         format: int64
       Nombre:
         type: string
-tags:
-- name: solicitud
-  description: |
-    SolicitudController operations for Solicitud
-=======
-      Id:
-        type: integer
-        format: int64
->>>>>>> develop
