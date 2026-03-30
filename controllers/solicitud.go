@@ -268,3 +268,47 @@ func (c *SolicitudController) PostEstados() {
 	}
 	c.ServeJSON()
 }
+
+// CancelarSolicitud ...
+// @Title Cancelación de la solicitud
+// @Description Desactiva la solicitud y todos sus registros asociados activos
+// @Param   id   path   int  true  "Id de la solicitud"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 bad request
+// @router /cancelar/:id [put]
+func (c *SolicitudController) CancelarSolicitud() {
+	idStr := c.Ctx.Input.Param(":id")
+	solicitudId, err := strconv.Atoi(idStr)
+	if err != nil || solicitudId <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "id de solicitud inválido",
+		}
+		c.Ctx.Output.SetStatus(400)
+		c.ServeJSON()
+		return
+	}
+
+	resultado, err := services.CancelarSolicitud(solicitudId)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "error cancelando solicitud",
+			"Error":   err.Error(),
+		}
+		c.Ctx.Output.SetStatus(500)
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "solicitud cancelada correctamente",
+		"Data":    resultado,
+	}
+	c.Ctx.Output.SetStatus(200)
+	c.ServeJSON()
+}
