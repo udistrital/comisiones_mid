@@ -54,6 +54,15 @@ func init() {
 
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"],
 		beego.ControllerComments{
+			Method:           "CancelarSolicitud",
+			Router:           "/cancelar/:id",
+			AllowHTTPMethods: []string{"put"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"],
+		beego.ControllerComments{
 			Method:           "CrearSolicitud",
 			Router:           "/crear_solicitud",
 			AllowHTTPMethods: []string{"post"},
