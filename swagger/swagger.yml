@@ -127,6 +127,26 @@ paths:
           description: '{string} delete success!'
         "403":
           description: id is empty
+  /solicitud/cancelar/{id}:
+    put:
+      tags:
+      - solicitud
+      description: Desactiva la solicitud y todos sus registros asociados activos
+      operationId: SolicitudController.Cancelación de la solicitud
+      parameters:
+      - in: path
+        name: id
+        description: Id de la solicitud
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: bad request
   /solicitud/crear_solicitud:
     post:
       tags:
