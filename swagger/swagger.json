@@ -484,9 +484,15 @@
             "title": "TipoSolicitud",
             "type": "object",
             "properties": {
+                "CodigoAbreviacion": {
+                    "type": "string"
+                },
                 "Id": {
                     "type": "integer",
                     "format": "int64"
+                },
+                "Nombre": {
+                    "type": "string"
                 }
             }
         }
