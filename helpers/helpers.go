@@ -2,9 +2,11 @@ package helpers
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
+
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/models"
-	"strconv"
 )
 
 func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resultado []map[string]interface{}, outputError map[string]interface{}) {
@@ -23,6 +25,7 @@ func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resulta
 		documentos,
 		&respuesta_creacion,
 	); err == nil && (status == 200 || status == 201) {
+		fmt.Println("CREO DOCUMENTOS")
 		if res, ok := respuesta_creacion["res"]; ok {
 			switch docs := res.(type) {
 			// varios documentos
@@ -51,7 +54,7 @@ func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resulta
 
 		return resultado, outputError
 	}
-
+	fmt.Println("ENTRO OTRA VEZ?")
 	return resultado, outputError
 }
 

@@ -40,7 +40,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	id_tercero := int(terceroMap["Id"].(float64))
-	fmt.Println(id_tercero)
+
 	req := models.SolicitudCreateRequest{
 		TerceroId: id_tercero,
 		Activo:    true,
@@ -51,14 +51,14 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 	var respSolicitud map[string]interface{}
 
-	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud","POST",&respSolicitud,req)
+	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud","POST",&respSolicitud, &req)
 	if err != nil {
 		return respuesta, map[string]interface{}{
 			"error":   "Error en request creando solicitud",
 			"detalle": err.Error(),
 		}
 	}
-	fmt.Println(respSolicitud)
+
 	var errorCreacionSolicitud map[string]interface{}
 	dataSolicitud, errorCreacionSolicitud := helpers.ValidarRespuesta(respSolicitud)
 	if errorCreacionSolicitud != nil {
@@ -80,7 +80,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	idSolicitud := int(idSolicitudFloat)
-	solicitudTemp := models.Solicitud{Id: idSolicitud}
+	solicitudTemp := models.Solicitud{Id: idSolicitud, ObservacionCierre: solicitud.Observacion}
 
 	formularioBytes, _ := json.Marshal(solicitud.Formulario)
 
@@ -98,15 +98,12 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	var respEstado map[string]interface{}
-	err = request.GetJson(beego.AppConfig.String("UrlTercerosCrud")+"estado_solicitud?query=CodigoAbreviacion:NO_ENV", &respEstado)
-
+	err = request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"estado_solicitud?query=CodigoAbreviacion:NO_ENV", &respEstado)
 	if err != nil {
 		return respuesta, map[string]interface{}{"error": "Error consultando estado"}
 	}
-
 	dataEstado := respEstado["Data"].([]interface{})
 	id_estado := int(dataEstado[0].(map[string]interface{})["Id"].(float64))
-
 	historico := models.HistoricoEstadoSolicitud{
 		SolicitudId:       &solicitudTemp,
 		EstadoSolicitudId: &models.EstadoSolicitud{Id: id_estado},
@@ -125,27 +122,36 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	idHistorico := int(respHistorico["Data"].(map[string]interface{})["Id"].(float64))
 
 	if len(solicitud.DocumentoSolicitud) > 0 {
-
+		fmt.Println("ENTRA A CREAR DOCUMENTO")
 		docs, errDoc := helpers.CrearDocumento(solicitud.DocumentoSolicitud)
 		if errDoc != nil {
 			return respuesta, map[string]interface{}{"error": "Error creando documentos"}
 		}
-
+		fmt.Println("SI CREO DOCUMENTOS")
 		for _, doc := range docs {
-
-			idDoc := int(doc["id"].(float64))
-
-			documento := map[string]interface{}{
-				"DocumentoId": idDoc,
-				"SolicitudEstadoEventoId": idHistorico, 
-				"TipoDocumentoId":         1,
-				"EstadoDocumentoId":       1,
-				"Activo":                 true,
+			fmt.Println("SI CREO")
+			fmt.Println(doc)
+			idDoc := int(doc["id"].(int))
+			fmt.Println("ENTRA ASIGNAR")
+			fmt.Println(idDoc)
+			documento := models.DocumentoSolicitud{
+				DocumentoId: idDoc,
+				HistoricoEstadoSolicitudId: &models.HistoricoEstadoSolicitud{
+					Id: idHistorico,
+				},
+				TipoDocumentoId: &models.TipoDocumentoSolicitud{
+					Id: 1,
+				},
+				EstadoDocumentoId: &models.EstadoDocumento{
+					Id: 1,
+				},
+				Activo: true,
 			}
 
 			var respDoc map[string]interface{}
 			err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud", "POST", &respDoc, &documento)
-
+			fmt.Println("SE CREA BIEN EN COMISIONES")
+			fmt.Println(respDoc)
 			if err != nil {
 				return respuesta, map[string]interface{}{
 					"error":   "Error vinculando documento",

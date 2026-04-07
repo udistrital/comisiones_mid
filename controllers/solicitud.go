@@ -84,8 +84,6 @@ func (c *SolicitudController) CrearSolicitud() {
 		}
 	}()
 
-	logs.Info("ENTRA A CREAR SOLICITUD")
-
 	var v models.CrearSolicitudEntrada
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
