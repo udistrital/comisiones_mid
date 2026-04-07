@@ -11,115 +11,152 @@ import (
 )
 
 func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.Solicitud, outputError map[string]interface{}) {
+
 	defer func() {
 		if err := recover(); err != nil {
-			outputError = map[string]interface{}{"funcion": "/CrearSolicitudService", "err": err, "status": "404"}
-			panic(outputError)
+			outputError = map[string]interface{}{
+				"funcion": "CrearSolicitud",
+				"error":   err,
+				"status":  500,
+			}
 		}
 	}()
-	// Llamar terceros para buscar datos
-	//Busqueda de datos del tercero por numero de documento
+
 	var persona []map[string]interface{}
-	if err := request.GetJson(beego.AppConfig.String("UrlTercerosCrud")+"datos_identificacion?query=Numero:"+fmt.Sprintf("%d", solicitud.Identificacion), &persona); err == nil {
-		if len(persona) > 0 && len(persona[0]) > 0 {
-			if tercero, ok := persona[0]["TerceroId"].(map[string]interface{}); ok {
-				if id_tercero, ok := tercero["Id"].(float64); ok {
-					var respuesta_request models.SolicitudCreateRequest
-					respuesta_request.TerceroId = int(id_tercero)
-					respuesta_request.Activo = true
-					respuesta_request.TipoSolicitudId = models.IdReference{
-						Id: solicitud.TipoSolicitudId,
-					}
-					var respuesta_creacion map[string]interface{}
-					if err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"/solicitud", "POST", &respuesta_creacion, &respuesta_request); err == nil {
-						fmt.Println("response", respuesta_creacion)
-						if solicitud.Formulario != nil {
-							formularioBytes, err := json.Marshal(solicitud.Formulario)
-							if err != nil {
-								fmt.Println("Error convirtiendo formulario a JSON:", err)
-								return respuesta, map[string]interface{}{"error": err.Error()}
-							}
-							var solicitud_temp models.Solicitud
-							if data, ok := respuesta_creacion["Data"].(map[string]interface{}); ok {
-								solicitud_temp.Id = int(data["Id"].(float64))
-								detalles_solicitud := models.DetalleSolicitud{
-									SolicitudId: &solicitud_temp,
-									Formulario:  string(formularioBytes),
-									Activo:      true,
-								}
-								var id_estado int
-								if solicitud.Formulario["formulario_completado"] == false || len(solicitud.DocumentoSolicitud) == 0 || solicitud.Observacion == "" {
-									id_estado = 1
-								} else {
-									id_estado = 2
-								}
+	err := request.GetJson(beego.AppConfig.String("UrlTercerosCrud")+
+		"datos_identificacion?query=Numero:"+fmt.Sprintf("%d", solicitud.Identificacion), &persona)
 
-								historico_solicitud := models.HistoricoEstadoSolicitud{
-									SolicitudId:       &solicitud_temp,
-									EstadoSolicitudId: &models.EstadoSolicitud{Id: id_estado},
-									RolUsuario:        solicitud.CodigoAbreviacionRol,
-									TerceroId:         int(id_tercero),
-									Activo:            true,
-								}
-								fmt.Println("historico_solicitud", historico_solicitud)
-								var respuesta_detalle_solicitud map[string]interface{}
-								var respuesta_historico_estado_solicitud map[string]interface{}
-								fmt.Println("CREO LA SOLICITUD")
-								if err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud", "POST", &respuesta_detalle_solicitud, &detalles_solicitud); err == nil {
-									fmt.Println("SE CREA LA SOLICITUD CON FORMULARIO")
-									if err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"historico_estado_solicitud", "POST", &respuesta_historico_estado_solicitud, &historico_solicitud); err == nil {
-										if solicitud.Formulario["formulario_completado"] == false || len(solicitud.DocumentoSolicitud) == 0 || solicitud.Observacion == "" {
-											if data_estado_historico, ok := respuesta_historico_estado_solicitud["Data"].(map[string]interface{}); ok {
-												var id_historico_estado int
-												if id, ok := data_estado_historico["Id"].(float64); ok {
-													id_historico_estado = int(id)
-												}
-												if len(solicitud.DocumentoSolicitud) != 0 {
-													var resultado_documentos []map[string]interface{}
-													var errDoc map[string]interface{}
-													if resultado_documentos, errDoc = helpers.CrearDocumento(solicitud.DocumentoSolicitud); errDoc == nil {
-														for _, doc := range resultado_documentos {
-															fmt.Println("DOCUMENTOS CREADOS")
-															fmt.Println(doc)
-															var idDoc int
-															switch v := doc["id"].(type) {
-															case float64:
-																idDoc = int(v)
-															case int:
-																idDoc = v
-															default:
-																fmt.Println("ERROR: tipo inesperado en id", v)
-																continue
-															}
-															documento_solicitud := models.DocumentoSolicitud{
-																DocumentoId:           idDoc,
-																SolicitudEstadoEvento: &models.HistoricoEstadoSolicitud{Id: id_historico_estado},
-																TipoDocumento:         &models.TipoDocumentoSolicitud{Id: 1},
-																EstadoDocumento:       &models.EstadoDocumento{Id: 1},
-																Activo:                true,
-															}
-															var respuesta_documento_solicitud map[string]interface{}
-															if err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud", "POST", &respuesta_documento_solicitud, &documento_solicitud); err == nil {
-																fmt.Println("documento creado y anexado a la solicitud")
-															}
+	if err != nil {
+		return respuesta, map[string]interface{}{"error": "Error consultando tercero", "detalle": err.Error()}
+	}
 
-														}
-													}
-												}
-											}
-										}
-										fmt.Println("SE CREA EL HISTORICO")
-									}
-								}
-							}
-						}
-					}
+	if len(persona) == 0 {
+		return respuesta, map[string]interface{}{"error": "No se encontró el tercero"}
+	}
+
+	terceroMap, ok := persona[0]["TerceroId"].(map[string]interface{})
+	if !ok {
+		return respuesta, map[string]interface{}{"error": "Estructura inválida de TerceroId"}
+	}
+
+	id_tercero := int(terceroMap["Id"].(float64))
+	fmt.Println(id_tercero)
+	req := models.SolicitudCreateRequest{
+		TerceroId: id_tercero,
+		Activo:    true,
+		TipoSolicitudId: models.IdReference{
+			Id: solicitud.TipoSolicitudId,
+		},
+		ObservacionCierre: solicitud.Observacion,
+	}
+	var respSolicitud map[string]interface{}
+
+	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud","POST",&respSolicitud,req)
+	if err != nil {
+		return respuesta, map[string]interface{}{
+			"error":   "Error en request creando solicitud",
+			"detalle": err.Error(),
+		}
+	}
+	fmt.Println(respSolicitud)
+	var errorCreacionSolicitud map[string]interface{}
+	dataSolicitud, errorCreacionSolicitud := helpers.ValidarRespuesta(respSolicitud)
+	if errorCreacionSolicitud != nil {
+		return respuesta, errorCreacionSolicitud
+	}
+
+	idRaw, ok := dataSolicitud["Id"]
+	if !ok {
+		return respuesta, map[string]interface{}{
+			"error": "No se encontró Id en la respuesta",
+		}
+	}
+
+	idSolicitudFloat, ok := idRaw.(float64)
+	if !ok {
+		return respuesta, map[string]interface{}{
+			"error": "Id con tipo inválido",
+		}
+	}
+
+	idSolicitud := int(idSolicitudFloat)
+	solicitudTemp := models.Solicitud{Id: idSolicitud}
+
+	formularioBytes, _ := json.Marshal(solicitud.Formulario)
+
+	detalle := models.DetalleSolicitud{
+		SolicitudId: &solicitudTemp,
+		Formulario:  string(formularioBytes),
+		Activo:      true,
+	}
+
+	var respDetalle map[string]interface{}
+	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud", "POST", &respDetalle, &detalle)
+
+	if err != nil {
+		return respuesta, map[string]interface{}{"error": "Error creando detalle", "detalle": err.Error()}
+	}
+
+	var respEstado map[string]interface{}
+	err = request.GetJson(beego.AppConfig.String("UrlTercerosCrud")+"estado_solicitud?query=CodigoAbreviacion:NO_ENV", &respEstado)
+
+	if err != nil {
+		return respuesta, map[string]interface{}{"error": "Error consultando estado"}
+	}
+
+	dataEstado := respEstado["Data"].([]interface{})
+	id_estado := int(dataEstado[0].(map[string]interface{})["Id"].(float64))
+
+	historico := models.HistoricoEstadoSolicitud{
+		SolicitudId:       &solicitudTemp,
+		EstadoSolicitudId: &models.EstadoSolicitud{Id: id_estado},
+		RolUsuario:        solicitud.CodigoAbreviacionRol,
+		TerceroId:         id_tercero,
+		Activo:            true,
+	}
+
+	var respHistorico map[string]interface{}
+	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"historico_estado_solicitud", "POST", &respHistorico, &historico)
+
+	if err != nil {
+		return respuesta, map[string]interface{}{"error": "Error creando histórico"}
+	}
+
+	idHistorico := int(respHistorico["Data"].(map[string]interface{})["Id"].(float64))
+
+	if len(solicitud.DocumentoSolicitud) > 0 {
+
+		docs, errDoc := helpers.CrearDocumento(solicitud.DocumentoSolicitud)
+		if errDoc != nil {
+			return respuesta, map[string]interface{}{"error": "Error creando documentos"}
+		}
+
+		for _, doc := range docs {
+
+			idDoc := int(doc["id"].(float64))
+
+			documento := map[string]interface{}{
+				"DocumentoId": idDoc,
+				"SolicitudEstadoEventoId": idHistorico, 
+				"TipoDocumentoId":         1,
+				"EstadoDocumentoId":       1,
+				"Activo":                 true,
+			}
+
+			var respDoc map[string]interface{}
+			err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud", "POST", &respDoc, &documento)
+
+			if err != nil {
+				return respuesta, map[string]interface{}{
+					"error":   "Error vinculando documento",
+					"idDoc":   idDoc,
+					"detalle": err.Error(),
 				}
 			}
 		}
 	}
 
-	return respuesta, outputError
+	return solicitudTemp, nil
 }
 
 func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.SolicitudResumen, outputError map[string]interface{}) {

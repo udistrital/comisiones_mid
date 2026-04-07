@@ -39,29 +39,93 @@ func (c *SolicitudController) URLMapping() {
 // @Failure 403 body is empty
 // @router /crear_solicitud [post]
 func (c *SolicitudController) CrearSolicitud() {
+
+	// 🔥 DEFER SEGURO
 	defer func() {
-		if err := recover(); err != nil {
-			logs.Error(err)
-			localError := err.(map[string]interface{})
-			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "CrearSolicitud" + "/" + (localError["funcion"]).(string))
-			c.Data["data"] = (localError["err"])
-			if status, ok := localError["status"]; ok {
-				c.Abort(status.(string))
-			} else {
-				c.Abort("404")
+		if r := recover(); r != nil {
+
+			logs.Error("PANIC RECOVER:", r)
+
+			response := map[string]interface{}{
+				"Success": false,
+				"Status":  500,
+				"Message": "Error interno del servidor",
+				"Data":    nil,
 			}
+			if errMap, ok := r.(map[string]interface{}); ok {
+
+				if s, ok := errMap["Status"].(int); ok {
+					response["Status"] = s
+				} else if s, ok := errMap["status"].(string); ok {
+					if parsed, err := strconv.Atoi(s); err == nil {
+						response["Status"] = parsed
+					}
+				}
+
+				if msg, ok := errMap["Message"].(string); ok && msg != "" {
+					response["Message"] = msg
+				} else if msg, ok := errMap["error"].(string); ok {
+					response["Message"] = msg
+				}
+
+				if data, ok := errMap["Data"]; ok {
+					response["Data"] = data
+				}
+			}
+
+			statusCode := 500
+			if s, ok := response["Status"].(int); ok {
+				statusCode = s
+			}
+
+			c.Ctx.Output.SetStatus(statusCode)
+			c.Data["json"] = response
+			c.ServeJSON()
 		}
 	}()
+
+	logs.Info("ENTRA A CREAR SOLICITUD")
+
 	var v models.CrearSolicitudEntrada
-	//var v map[string]interface{}
-	json.Unmarshal(c.Ctx.Input.RequestBody, &v)
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err == nil {
-		if response, err := services.CrearSolicitud(v); err == nil {
-			c.Ctx.Output.SetStatus(201)
-			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
-		} else {
-			panic(err)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
+
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  400,
+			"Message": "JSON inválido",
+			"Data":    nil,
 		}
+		c.ServeJSON()
+		return
+	}
+
+	response, apiError := services.CrearSolicitud(v)
+
+	if apiError != nil {
+
+		statusCode := 500
+
+		if s, ok := apiError["Status"].(int); ok {
+			statusCode = s
+		} else if s, ok := apiError["Status"].(string); ok {
+			if parsed, err := strconv.Atoi(s); err == nil {
+				statusCode = parsed
+			}
+		}
+
+		c.Ctx.Output.SetStatus(statusCode)
+		c.Data["json"] = apiError
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  201,
+		"Message": "Solicitud creada correctamente",
+		"Data":    response,
 	}
 	c.ServeJSON()
 }

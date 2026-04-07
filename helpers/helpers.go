@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/models"
+	"strconv"
 )
 
 func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resultado []map[string]interface{}, outputError map[string]interface{}) {
@@ -90,4 +91,41 @@ func ObtenerDatosFormulario(detalleSolicitud map[string]interface{}) (datos mode
 		"status":  "404",
 	}
 	return datos, outputError
+}
+
+func ValidarRespuesta(resp map[string]interface{}) (map[string]interface{}, map[string]interface{}) {
+
+	success, _ := resp["Success"].(bool)
+
+	var status int
+	switch v := resp["Status"].(type) {
+	case float64:
+		status = int(v)
+	case string:
+		status, _ = strconv.Atoi(v)
+	default:
+		status = 500
+	}
+
+	if !success || status >= 400 {
+		return nil, map[string]interface{}{
+			"Success": false,
+			"Status":  status,
+			"Message": "Error en servicio externo",
+			"Data":    resp["Data"],
+			"Raw":     resp, // 🔥 útil para debug
+		}
+	}
+
+	data, ok := resp["Data"].(map[string]interface{})
+	if !ok || data == nil {
+		return nil, map[string]interface{}{
+			"Success": false,
+			"Status":  502,
+			"Message": "Respuesta sin data",
+			"Data":    nil,
+		}
+	}
+
+	return data, nil
 }
