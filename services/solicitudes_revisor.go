@@ -22,19 +22,19 @@ func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]mod
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	logs.Info("UrlComisionesCrud=%q", baseCrud)
 	if baseCrud == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
 	}
 
 	urlCoordinador := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
 	logs.Info("UrlJBPM=%q", urlCoordinador)
 	if urlCoordinador == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlJBPM")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlJBPM")
 	}
 	urlCoordinador = strings.TrimRight(urlCoordinador, "/") + "/coordinador_usuario/"
 
-	proyectoCoordinador, err := obtenerProyectoCurricularCoordinador(urlCoordinador, numeroIdentificacion)
+	proyectosCoordinador, err := obtenerProyectosCurricularesCoordinador(urlCoordinador, numeroIdentificacion)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudo obtener el proyecto curricular del coordinador: %v", err)
+		return nil, fmt.Errorf("no se pudo obtener los proyectos curriculares del coordinador: %v", err)
 	}
 
 	estadoPendiente := "REV_PROY"
@@ -66,7 +66,7 @@ func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]mod
 			continue
 		}
 
-		if normalizarTexto(proyectoSolicitud) != normalizarTexto(proyectoCoordinador) {
+		if !contieneProyecto(proyectosCoordinador, proyectoSolicitud) {
 			continue
 		}
 
@@ -93,24 +93,41 @@ func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]mod
 	return resultado, nil
 }
 
-func obtenerProyectoCurricularCoordinador(baseURL, numeroIdentificacion string) (string, error) {
+func obtenerProyectosCurricularesCoordinador(baseURL, numeroIdentificacion string) ([]string, error) {
 	urlFinal := strings.TrimRight(baseURL, "/") + "/" + strings.TrimSpace(numeroIdentificacion)
 
 	var resp models.CoordinadoresXML
 	if err := request.GetXml(urlFinal, &resp); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if len(resp.Coordinadores) == 0 {
-		return "", fmt.Errorf("no se encontró información de coordinador para la identificación %s", numeroIdentificacion)
+		return nil, fmt.Errorf("no se encontro informacion de coordinador para la identificacion %s", numeroIdentificacion)
 	}
 
-	proyecto := strings.TrimSpace(resp.Coordinadores[0].NombreCarrera)
-	if proyecto == "" {
-		return "", fmt.Errorf("la respuesta XML no trajo nombre_carrera")
+	proyectos := make([]string, 0, len(resp.Coordinadores))
+	proyectosNormalizados := make(map[string]struct{})
+
+	for _, coordinador := range resp.Coordinadores {
+		proyecto := strings.TrimSpace(coordinador.NombreCarrera)
+		if proyecto == "" {
+			continue
+		}
+
+		proyectoNormalizado := normalizarTexto(proyecto)
+		if _, exists := proyectosNormalizados[proyectoNormalizado]; exists {
+			continue
+		}
+
+		proyectosNormalizados[proyectoNormalizado] = struct{}{}
+		proyectos = append(proyectos, proyecto)
 	}
 
-	return proyecto, nil
+	if len(proyectos) == 0 {
+		return nil, fmt.Errorf("la respuesta XML no trajo nombre_carrera")
+	}
+
+	return proyectos, nil
 }
 
 func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]models.SolicitudPendienteRevisor, error) {
@@ -121,13 +138,13 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	logs.Info("UrlComisionesCrud=%q", baseCrud)
 	if baseCrud == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
 	}
 
 	urlSecretaria := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
 	logs.Info("UrlJBPM=%q", urlSecretaria)
 	if urlSecretaria == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no está configurado UrlJBPM")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlJBPM")
 	}
 	urlSecretaria = strings.TrimRight(urlSecretaria, "/") + "/secretaria_academica/"
 
@@ -201,7 +218,7 @@ func obtenerDependenciaSecretaria(baseURL, numeroIdentificacion string) (string,
 	}
 
 	if len(resp.Persona) == 0 {
-		return "", fmt.Errorf("no se encontro información del secretario(a) para la identificación %s", numeroIdentificacion)
+		return "", fmt.Errorf("no se encontro informacion del secretario(a) para la identificacion %s", numeroIdentificacion)
 	}
 
 	dependencia := strings.TrimSpace(resp.Persona[0].Dependencia)
@@ -230,7 +247,7 @@ func consultarSolicitudesPorEstado(baseCrud, codigoEstado string) ([]map[string]
 
 	raw, ok := resp["Data"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("respuesta inválida consultando históricos")
+		return nil, fmt.Errorf("respuesta invalida consultando historicos")
 	}
 
 	resultado := make([]map[string]interface{}, 0, len(raw))
@@ -268,11 +285,22 @@ func obtenerDetalleSolicitud(baseCrud string, solicitudId int) (map[string]inter
 
 func normalizarTexto(s string) string {
 	s = strings.TrimSpace(strings.ToLower(s))
-	s = strings.ReplaceAll(s, "á", "a")
-	s = strings.ReplaceAll(s, "é", "e")
-	s = strings.ReplaceAll(s, "í", "i")
-	s = strings.ReplaceAll(s, "ó", "o")
-	s = strings.ReplaceAll(s, "ú", "u")
-	s = strings.ReplaceAll(s, "ü", "u")
+	s = strings.ReplaceAll(s, "?", "a")
+	s = strings.ReplaceAll(s, "?", "e")
+	s = strings.ReplaceAll(s, "?", "i")
+	s = strings.ReplaceAll(s, "?", "o")
+	s = strings.ReplaceAll(s, "?", "u")
+	s = strings.ReplaceAll(s, "?", "u")
 	return s
+}
+
+func contieneProyecto(proyectos []string, proyectoSolicitud string) bool {
+	proyectoSolicitudNormalizado := normalizarTexto(proyectoSolicitud)
+	for _, proyecto := range proyectos {
+		if normalizarTexto(proyecto) == proyectoSolicitudNormalizado {
+			return true
+		}
+	}
+
+	return false
 }
