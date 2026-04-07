@@ -285,12 +285,12 @@ func obtenerDetalleSolicitud(baseCrud string, solicitudId int) (map[string]inter
 
 func normalizarTexto(s string) string {
 	s = strings.TrimSpace(strings.ToLower(s))
-	s = strings.ReplaceAll(s, "?", "a")
-	s = strings.ReplaceAll(s, "?", "e")
-	s = strings.ReplaceAll(s, "?", "i")
-	s = strings.ReplaceAll(s, "?", "o")
-	s = strings.ReplaceAll(s, "?", "u")
-	s = strings.ReplaceAll(s, "?", "u")
+	s = strings.ReplaceAll(s, "á", "a")
+	s = strings.ReplaceAll(s, "é", "e")
+	s = strings.ReplaceAll(s, "í", "i")
+	s = strings.ReplaceAll(s, "ó", "o")
+	s = strings.ReplaceAll(s, "ú", "u")
+	s = strings.ReplaceAll(s, "ü", "u")
 	return s
 }
 
