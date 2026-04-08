@@ -25,11 +25,11 @@ func CrearDocumentosSolicitud(
 	documentosGestor := make([]models.CrearDocumentoGestorDocumental, 0, len(documentosReq))
 
 	for i, doc := range documentosReq {
-		if strings.TrimSpace(doc.NombreArchivo) == "" {
-			return nil, nil, fmt.Errorf("Documentos[%d].NombreArchivo es obligatorio", i)
+		if strings.TrimSpace(doc.Nombre) == "" {
+			return nil, nil, fmt.Errorf("Documentos[%d].Nombre es obligatorio", i)
 		}
 		if strings.TrimSpace(doc.File) == "" {
-			return nil, nil, fmt.Errorf("Documentos[%d].Base64Documento es obligatorio", i)
+			return nil, nil, fmt.Errorf("Documentos[%d].File es obligatorio", i)
 		}
 		if doc.IdTipoDocumento <= 0 {
 			return nil, nil, fmt.Errorf("Documentos[%d].IdTipoDocumento es obligatorio", i)
@@ -37,8 +37,8 @@ func CrearDocumentosSolicitud(
 
 		documentosGestor = append(documentosGestor, models.CrearDocumentoGestorDocumental{
 			IdTipoDocumento: doc.IdTipoDocumento,
-			Nombre:          strings.TrimSpace(doc.NombreArchivo),
-			Descripcion:     strings.TrimSpace(doc.DescripcionDocumento),
+			Nombre:          strings.TrimSpace(doc.Nombre),
+			Descripcion:     strings.TrimSpace(doc.Descripcion),
 			Metadatos:       doc.Metadatos,
 			File:            strings.TrimSpace(doc.File),
 		})
