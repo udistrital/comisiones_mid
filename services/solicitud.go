@@ -2,8 +2,10 @@ package services
 
 import (
 	"fmt"
+	"net/url"
 
 	"encoding/json"
+
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
@@ -157,6 +159,281 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	return solicitudTemp, nil
+}
+
+func EditarSolicitud(solicitudId int, req models.EditarSolicitud) (models.EditarSolicitudResponse, error) {
+	var respuesta models.EditarSolicitudResponse
+	respuesta.SolicitudId = solicitudId
+
+	if solicitudId <= 0 {
+		return respuesta, fmt.Errorf("solicitudId es obligatorio")
+	}
+
+	baseCrud := beego.AppConfig.String("UrlComisionesCrud")
+
+	if err := actualizarSolicitud(baseCrud, solicitudId, req); err != nil {
+		return respuesta, err
+	}
+
+	detalleId, err := edicionDetalleSolicitud(baseCrud, solicitudId, req.Formulario)
+	if err != nil {
+		return respuesta, err
+	}
+	respuesta.DetalleSolicitudId = detalleId
+
+	documentosADesactivar := documentosADesactivar(req)
+
+	if len(req.DocumentosNuevos) > 0 {
+		historicoActivoId, err := obtenerHistoricoActivo(baseCrud, solicitudId)
+		if err != nil {
+			return respuesta, err
+		}
+
+		respuesta.HistoricoEstadoSolicitudId = historicoActivoId
+
+		documentosIds, documentoSolicitudIds, err := CrearDocumentosSolicitud(baseCrud, historicoActivoId, req.DocumentosNuevos)
+		if err != nil {
+			return respuesta, err
+		}
+
+		respuesta.DocumentoIds = documentosIds
+		respuesta.DocumentoSolicitudIds = documentoSolicitudIds
+	}
+
+	if len(documentosADesactivar) > 0 {
+		if err := desactivarDocumentosSolicitudAsociados(baseCrud, solicitudId, documentosADesactivar); err != nil {
+			return respuesta, err
+		}
+		respuesta.DocumentosDesactivados = documentosADesactivar
+	}
+
+	respuesta.Mensaje = "Solicitud actualizada correctamente"
+	return respuesta, nil
+}
+
+func actualizarSolicitud(baseCrud string, solicitudId int, req models.EditarSolicitud) error {
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/solicitud/%d", solicitudId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return err
+	}
+
+	var getResp map[string]interface{}
+	if err := request.GetJson(getURL, &getResp); err != nil {
+		return fmt.Errorf("error consultando solicitud %d: %v", solicitudId, err)
+	}
+
+	obj := helpers.UnwrapDataToMap(getResp)
+	if obj == nil {
+		return fmt.Errorf("respuesta inválida al consultar solicitud %d", solicitudId)
+	}
+
+	if req.TipoSolicitudId > 0 {
+		obj["TipoSolicitudId"] = map[string]interface{}{"Id": req.TipoSolicitudId}
+	}
+
+	obj["ObservacionCierre"] = req.Observacion
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(getURL, "PUT", &putResp, obj); err != nil {
+		return fmt.Errorf("error actualizando solicitud %d: %v", solicitudId, err)
+	}
+
+	return nil
+}
+
+func edicionDetalleSolicitud(baseCrud string, solicitudId int, formulario map[string]interface{}) (int, error) {
+	if formulario == nil {
+		return 0, nil
+	}
+
+	formularioBytes, err := json.Marshal(formulario)
+	if err != nil {
+		return 0, fmt.Errorf("error convirtiendo formulario a JSON: %v", err)
+	}
+
+	detalleId, detalleObj, err := obtenerDetalleSolicitudActivo(baseCrud, solicitudId)
+	if err != nil {
+		return 0, err
+	}
+
+	if detalleObj == nil {
+		postURL := helpers.JoinURL(baseCrud, "/detalle_solicitud")
+		if err := helpers.ValidateAbsoluteURL(postURL); err != nil {
+			return 0, err
+		}
+
+		payload := map[string]interface{}{
+			"SolicitudId": map[string]interface{}{"Id": solicitudId},
+			"Formulario":  string(formularioBytes),
+			"Activo":      true,
+		}
+
+		var postResp map[string]interface{}
+		if err := request.SendJson(postURL, "POST", &postResp, payload); err != nil {
+			return 0, fmt.Errorf("error creando detalle_solicitud para la solicitud %d: %v", solicitudId, err)
+		}
+
+		return helpers.ExtractIdAtoi(postResp), nil
+	}
+
+	detalleObj["Formulario"] = string(formularioBytes)
+
+	putURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/detalle_solicitud/%d", detalleId))
+	if err := helpers.ValidateAbsoluteURL(putURL); err != nil {
+		return 0, err
+	}
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(putURL, "PUT", &putResp, detalleObj); err != nil {
+		return 0, fmt.Errorf("error actualizando detalle_solicitud %d: %v", detalleId, err)
+	}
+
+	return detalleId, nil
+}
+
+func obtenerDetalleSolicitudActivo(baseCrud string, solicitudId int) (int, map[string]interface{}, error) {
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/detalle_solicitud"))
+	if err != nil {
+		return 0, nil, err
+	}
+
+	q := u.Query()
+	q.Set("query", fmt.Sprintf("SolicitudId:%d,Activo:true", solicitudId))
+	q.Set("sortby", "FechaCreacion")
+	q.Set("order", "desc")
+	q.Set("limit", "1")
+	u.RawQuery = q.Encode()
+
+	var resp map[string]interface{}
+	if err := request.GetJson(u.String(), &resp); err != nil {
+		return 0, nil, fmt.Errorf("error consultando detalle_solicitud activo: %v", err)
+	}
+
+	obj := helpers.UnwrapDataToMap(resp)
+	if obj == nil {
+		return 0, nil, nil
+	}
+
+	detalleId := helpers.ExtractIdAtoi(resp)
+	if detalleId <= 0 {
+		return 0, nil, fmt.Errorf("no se pudo determinar el id del detalle_solicitud activo de la solicitud %d", solicitudId)
+	}
+
+	return detalleId, obj, nil
+}
+
+func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
+	historicoObj, err := getHistoricoActivoActual(baseCrud, solicitudId)
+	if err != nil {
+		return 0, err
+	}
+
+	if historicoObj == nil {
+		return 0, fmt.Errorf("no se encontró histórico activo para la solicitud %d", solicitudId)
+	}
+
+	historicoId := extraerIdRelacionado(historicoObj["Id"])
+	if historicoId <= 0 {
+		return 0, fmt.Errorf("no se pudo obtener el id del histórico activo para la solicitud %d", solicitudId)
+	}
+
+	return historicoId, nil
+}
+
+func documentosADesactivar(req models.EditarSolicitud) []int {
+	ids := make([]int, 0)
+	seen := make(map[int]struct{})
+
+	for _, id := range req.DocumentosDesactivar {
+		if id > 0 {
+			if _, ok := seen[id]; !ok {
+				seen[id] = struct{}{}
+				ids = append(ids, id)
+			}
+		}
+	}
+
+	return ids
+}
+
+func desactivarDocumentosSolicitudAsociados(baseCrud string, solicitudId int, documentoSolicitudIds []int) error {
+	for _, documentoSolicitudId := range documentoSolicitudIds {
+		getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/documento_solicitud/%d", documentoSolicitudId))
+		if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+			return err
+		}
+
+		var getResp map[string]interface{}
+		if err := request.GetJson(getURL, &getResp); err != nil {
+			return fmt.Errorf("error consultando documento_solicitud %d: %v", documentoSolicitudId, err)
+		}
+
+		obj := helpers.UnwrapDataToMap(getResp)
+		if obj == nil {
+			return fmt.Errorf("respuesta inválida al consultar documento_solicitud %d", documentoSolicitudId)
+		}
+
+		historicoId := extraerIdRelacionado(obj["HistoricoEstadoSolicitudId"])
+		if historicoId <= 0 {
+			return fmt.Errorf("no se pudo obtener el histórico asociado al documento_solicitud %d", documentoSolicitudId)
+		}
+
+		if err := validarHistorico(baseCrud, historicoId, solicitudId); err != nil {
+			return err
+		}
+
+		obj["Activo"] = false
+
+		var putResp map[string]interface{}
+		if err := request.SendJson(getURL, "PUT", &putResp, obj); err != nil {
+			return fmt.Errorf("error desactivando documento_solicitud %d: %v", documentoSolicitudId, err)
+		}
+	}
+	return nil
+}
+
+func validarHistorico(baseCrud string, historicoId int, solicitudId int) error {
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return err
+	}
+
+	var getResp map[string]interface{}
+	if err := request.GetJson(getURL, &getResp); err != nil {
+		return fmt.Errorf("error consultando histórico %d: %v", historicoId, err)
+	}
+
+	obj := helpers.UnwrapDataToMap(getResp)
+	if obj == nil {
+		return fmt.Errorf("respuesta inválida al consultar histórico %d", historicoId)
+	}
+
+	solicitudAsociadaId := extraerIdRelacionado(obj["SolicitudId"])
+	if solicitudAsociadaId != solicitudId {
+		return fmt.Errorf("el documento_solicitud asociado al histórico %d no pertenece a la solicitud %d", historicoId, solicitudId)
+	}
+
+	return nil
+}
+
+func extraerIdRelacionado(obj interface{}) int {
+	switch valor := obj.(type) {
+	case map[string]interface{}:
+		if id, ok := valor["Id"]; ok {
+			switch v := id.(type) {
+			case float64:
+				return int(v)
+			case int:
+				return v
+			}
+		}
+	case float64:
+		return int(valor)
+	case int:
+		return valor
+	}
+
+	return 0
 }
 
 func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.SolicitudResumen, outputError map[string]interface{}) {

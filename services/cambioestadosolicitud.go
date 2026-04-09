@@ -115,15 +115,27 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 
 	// Documentos múltiples opcionales asociados al nuevo histórico
 	if len(req.Documentos) > 0 {
-		documentoIds, documentoSolicitudIds, err := crearDocumentosSolicitudMultiples(baseCrud, resp.HistoricoNuevoId, req.Documentos)
+		documentoIds, documentoSolicitudIds, err := crearDocumentosCambioEstado(
+			baseCrud,
+			resp.HistoricoNuevoId,
+			req.Documentos,
+		)
 		if err != nil {
-			return models.CambioEstadoSolicitudResponse{}, err
+			rollbackErr := revertirCambioEstado(
+				baseCrud,
+				resp.HistoricoAnteriorId,
+				resp.HistoricoNuevoId,
+				resp.ObservacionId,
+			)
+			if rollbackErr != nil {
+				return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("error creando documentos: %v\n Tambien fallo el rollback: %v", err, rollbackErr)
+			}
+			return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("error creando documentos: %v.", err)
 		}
 
 		resp.DocumentoIds = documentoIds
 		resp.DocumentoSolicitudIds = documentoSolicitudIds
 
-		// Compatibilidad hacia atrás, si aún tienes estos campos en el response
 		if len(documentoIds) > 0 {
 			resp.DocumentoId = documentoIds[0]
 		}
@@ -145,7 +157,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	return resp, nil
 }
 
-func crearDocumentosSolicitudMultiples(
+func crearDocumentosCambioEstado(
 	baseCrud string,
 	historicoId int,
 	documentosReq []models.DocumentoCambioEstadoRequest) ([]int, []int, error) {
@@ -163,8 +175,8 @@ func crearDocumentosSolicitudMultiples(
 		if doc.IdTipoDocumento <= 0 {
 			return nil, nil, fmt.Errorf("Documentos[%d].IdTipoDocumento es obligatorio", i)
 		}
-		if strings.TrimSpace(doc.NombreArchivo) == "" {
-			return nil, nil, fmt.Errorf("Documentos[%d].NombreArchivo es obligatorio", i)
+		if strings.TrimSpace(doc.Nombre) == "" {
+			return nil, nil, fmt.Errorf("Documentos[%d].Nombre es obligatorio", i)
 		}
 		if strings.TrimSpace(doc.File) == "" {
 			return nil, nil, fmt.Errorf("Documentos[%d].File es obligatorio", i)
@@ -172,10 +184,10 @@ func crearDocumentosSolicitudMultiples(
 
 		documentosGestor = append(documentosGestor, models.CrearDocumentoGestorDocumental{
 			IdTipoDocumento: doc.IdTipoDocumento,
-			Nombre:          strings.TrimSpace(doc.NombreArchivo),
-			Descripcion:     strings.TrimSpace(doc.DescripcionDocumento),
+			Nombre:          doc.Nombre,
+			Descripcion:     doc.Descripcion,
 			Metadatos:       doc.Metadatos,
-			File:            strings.TrimSpace(doc.File),
+			File:            doc.File,
 		})
 	}
 
@@ -399,6 +411,81 @@ func desactivarHistorico(base string, historicoId int) error {
 	err = request.SendJson(getURL, "PUT", &putResp, obj)
 	if err != nil {
 		return fmt.Errorf("error PUT histórico: %v", err)
+	}
+
+	return nil
+}
+
+func revertirCambioEstado(baseCrud string, historicoAnteriorId int, historicoNuevoId int, observacionId int) error {
+	if observacionId > 0 {
+		if err := eliminarObservacion(baseCrud, observacionId); err != nil {
+			return fmt.Errorf("no se pudo eliminar la observación %d: %v", observacionId, err)
+		}
+	}
+
+	if historicoNuevoId > 0 {
+		if err := eliminarHistorico(baseCrud, historicoNuevoId); err != nil {
+			return fmt.Errorf("no se pudo eliminar el histórico nuevo %d: %v", historicoNuevoId, err)
+		}
+	}
+
+	if historicoAnteriorId > 0 {
+		if err := activarHistorico(baseCrud, historicoAnteriorId); err != nil {
+			return fmt.Errorf("no se pudo reactivar el histórico anterior %d: %v", historicoAnteriorId, err)
+		}
+	}
+	return nil
+}
+
+func eliminarObservacion(baseCrud string, observacionId int) error {
+	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/observacion/%d", observacionId))
+	if err := helpers.ValidateAbsoluteURL(deleteURL); err != nil {
+		return err
+	}
+
+	var deleteResp map[string]interface{}
+	if err := request.SendJson(deleteURL, "DELETE", &deleteResp, map[string]interface{}{}); err != nil {
+		return fmt.Errorf("error eliminando observación %d: %v", observacionId, err)
+	}
+
+	return nil
+}
+
+func eliminarHistorico(baseCrud string, historicoId int) error {
+	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	if err := helpers.ValidateAbsoluteURL(deleteURL); err != nil {
+		return err
+	}
+
+	var deleteResp map[string]interface{}
+	if err := request.SendJson(deleteURL, "DELETE", &deleteResp, map[string]interface{}{}); err != nil {
+		return fmt.Errorf("error eliminando histórico %d: %v", historicoId, err)
+	}
+
+	return nil
+}
+
+func activarHistorico(base string, historicoId int) error {
+	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return err
+	}
+
+	var getResp map[string]interface{}
+	if err := request.GetJson(getURL, &getResp); err != nil {
+		return fmt.Errorf("error GET histórico %d: %v", historicoId, err)
+	}
+
+	obj := helpers.UnwrapDataToMap(getResp)
+	if obj == nil {
+		return fmt.Errorf("respuesta inválida al consultar histórico %d", historicoId)
+	}
+
+	obj["Activo"] = true
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(getURL, "PUT", &putResp, obj); err != nil {
+		return fmt.Errorf("error reactivando histórico %d: %v", historicoId, err)
 	}
 
 	return nil

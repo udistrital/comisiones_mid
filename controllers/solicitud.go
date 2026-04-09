@@ -308,7 +308,33 @@ func (c *SolicitudController) GetAll() {
 // @Failure 403 :id is not int
 // @router /:id [put]
 func (c *SolicitudController) Put() {
+	idStr := c.Ctx.Input.Param(":id")
+	solicitudId, err := strconv.Atoi(idStr)
+	if err != nil || solicitudId <= 0 {
+		c.CustomAbort(400, "id de solicitud inválido")
+		return
+	}
 
+	var req models.EditarSolicitud
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.CustomAbort(400, "JSON inválido: "+err.Error())
+		return
+	}
+
+	resp, err := services.EditarSolicitud(solicitudId, req)
+	if err != nil {
+		c.CustomAbort(400, err.Error())
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  200,
+		"Message": "Solicitud actualizada correctamente",
+		"Data":    resp,
+	}
+	c.ServeJSON()
 }
 
 // Delete ...
