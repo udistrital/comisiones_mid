@@ -632,7 +632,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	var respuesta_documentos map[string]interface{}
 
 	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud),
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true",
 		&respuesta_documentos,
 	); err == nil {
 
@@ -652,7 +652,9 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 						if len(detalle_doc) == 0 {
 							continue
 						}
-
+						fmt.Println(".----------------")
+						fmt.Println(detalle_doc)
+						idDocumento := int(detalle_doc["Id"].(float64))
 						nombre, _ := detalle_doc["Nombre"].(string)
 						enlace, _ := detalle_doc["Enlace"].(string)
 
@@ -680,6 +682,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 
 						if nombre != "" && enlace != "" {
 							documento_aux := models.DocumentoDetalle{
+								Id:     idDocumento,
 								Nombre: nombre,
 								Enlace: enlace,
 								Tipo:   tipo,
