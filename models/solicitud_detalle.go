@@ -4,14 +4,14 @@ type SolicitudDetalles struct {
 	Solicitud       *Solicitud
 	EstadoSolicitud *EstadoSolicitud
 	Formulario      interface{}
-	Observacion		string
+	Observacion     string
 	Documentos      []DocumentoDetalle
 }
 
 type DocumentoDetalle struct {
-	Id		int
-	Nombre 	string
-	Enlace 	string
-	Tipo   	*TipoDocumentoSolicitud
-	Estado 	*EstadoDocumento
+	Id     int
+	Nombre string
+	Enlace string
+	Tipo   *TipoDocumentoSolicitud
+	Estado *EstadoDocumento
 }

@@ -405,7 +405,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 
 						if nombre != "" && enlace != "" {
 							documento_aux := models.DocumentoDetalle{
-								Id: idDocumento,
+								Id:     idDocumento,
 								Nombre: nombre,
 								Enlace: enlace,
 								Tipo:   tipo,
