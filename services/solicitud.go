@@ -375,7 +375,9 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 						if len(detalle_doc) == 0 {
 							continue
 						}
-
+						fmt.Println(".----------------")
+						fmt.Println(detalle_doc)
+						idDocumento := int(detalle_doc["Id"].(float64))
 						nombre, _ := detalle_doc["Nombre"].(string)
 						enlace, _ := detalle_doc["Enlace"].(string)
 
@@ -403,6 +405,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 
 						if nombre != "" && enlace != "" {
 							documento_aux := models.DocumentoDetalle{
+								Id: idDocumento,
 								Nombre: nombre,
 								Enlace: enlace,
 								Tipo:   tipo,
