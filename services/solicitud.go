@@ -355,7 +355,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	var respuesta_documentos map[string]interface{}
 
 	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud),
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true",
 		&respuesta_documentos,
 	); err == nil {
 
