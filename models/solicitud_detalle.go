@@ -9,9 +9,10 @@ type SolicitudDetalles struct {
 }
 
 type DocumentoDetalle struct {
-	Id     int
-	Nombre string
-	Enlace string
-	Tipo   *TipoDocumentoSolicitud
-	Estado *EstadoDocumento
+	Id          int
+	IdDocumento int
+	Nombre      string
+	Enlace      string
+	Tipo        *TipoDocumentoSolicitud
+	Estado      *EstadoDocumento
 }

@@ -637,12 +637,10 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	); err == nil {
 
 		if data_documentos, ok := respuesta_documentos["Data"].([]interface{}); ok && len(data_documentos) > 0 {
-
 			for _, doc := range data_documentos {
 				if documento, ok := doc.(map[string]interface{}); ok {
-
+					idDocumentoComision := int(documento["Id"].(float64))
 					docId := int(documento["DocumentoId"].(float64))
-
 					var detalle_doc map[string]interface{}
 					if err := request.GetJson(
 						beego.AppConfig.String("UrlDocumentos")+"documento/"+fmt.Sprintf("%d", docId),
@@ -682,11 +680,12 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 
 						if nombre != "" && enlace != "" {
 							documento_aux := models.DocumentoDetalle{
-								Id:     idDocumento,
-								Nombre: nombre,
-								Enlace: enlace,
-								Tipo:   tipo,
-								Estado: estado,
+								Id:          idDocumentoComision,
+								IdDocumento: idDocumento,
+								Nombre:      nombre,
+								Enlace:      enlace,
+								Tipo:        tipo,
+								Estado:      estado,
 							}
 
 							respuesta.Documentos = append(respuesta.Documentos, documento_aux)
