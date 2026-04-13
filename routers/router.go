@@ -20,6 +20,7 @@ func init() {
 				&controllers.SolicitudController{},
 				&controllers.SolicitudPendienteCoordinadorController{},
 				&controllers.SolicitudPendienteSecretariaController{},
+				&controllers.SolicitudPendienteDecanoController{},
 			),
 		),
 	)

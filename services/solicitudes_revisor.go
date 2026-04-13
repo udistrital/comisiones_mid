@@ -229,6 +229,119 @@ func obtenerDependenciaSecretaria(baseURL, numeroIdentificacion string) (string,
 	return dependencia, nil
 }
 
+func ObtenerSolicitudesPendientesDecano(numeroIdentificacion string) ([]models.SolicitudPendienteRevisor, error) {
+	if strings.TrimSpace(numeroIdentificacion) == "" {
+		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
+	}
+
+	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
+	if baseCrud == "" {
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
+	}
+
+	urlDecano := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
+	if urlDecano == "" {
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlJBPM")
+	}
+	urlDecano = strings.TrimRight(urlDecano, "/") + "/decano/"
+
+	facultadesDecano, err := obtenerFacultadesDecano(urlDecano, numeroIdentificacion)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo obtener las facultades del decano: %v", err)
+	}
+
+	estadoPendiente := "REV_DEC"
+	solicitudes, err := consultarSolicitudesPorEstado(baseCrud, estadoPendiente)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudieron consultar las solicitudes pendientes: %v", err)
+	}
+
+	resultado := make([]models.SolicitudPendienteRevisor, 0)
+
+	for _, solicitud := range solicitudes {
+		solicitudId, err := strconv.Atoi(strings.TrimSpace(fmt.Sprintf("%v", solicitud["Id"])))
+		if err != nil || solicitudId <= 0 {
+			continue
+		}
+
+		detalleSolicitudResp, err := obtenerDetalleSolicitud(baseCrud, solicitudId)
+		if err != nil {
+			continue
+		}
+
+		datosFormulario, outputError := helpers.ObtenerDatosFormulario(detalleSolicitudResp)
+		if outputError != nil {
+			continue
+		}
+
+		facultadSolicitud := strings.TrimSpace(datosFormulario.Solicitante.Q2Facultad)
+		if facultadSolicitud == "" {
+			continue
+		}
+
+		if !contieneProyecto(facultadesDecano, facultadSolicitud) {
+			continue
+		}
+
+		nombreDocente := strings.TrimSpace(datosFormulario.Solicitante.Q3NombresApellidos)
+		documentoDocente := strings.TrimSpace(datosFormulario.Solicitante.Q4DocumentoIdentificacion)
+
+		estadoSolicitud := ""
+		if estadoObj, ok := solicitud["EstadoSolicitudId"].(map[string]interface{}); ok {
+			estadoSolicitud = strings.TrimSpace(fmt.Sprintf("%v", estadoObj["Nombre"]))
+			if estadoSolicitud == "" {
+				estadoSolicitud = strings.TrimSpace(fmt.Sprintf("%v", estadoObj["CodigoAbreviacion"]))
+			}
+		}
+
+		resultado = append(resultado, models.SolicitudPendienteRevisor{
+			Id:               solicitudId,
+			FechaCreacion:    strings.TrimSpace(fmt.Sprintf("%v", solicitud["FechaCreacion"])),
+			NombreDocente:    nombreDocente,
+			DocumentoDocente: documentoDocente,
+			EstadoSolicitud:  estadoSolicitud,
+		})
+	}
+
+	return resultado, nil
+}
+
+func obtenerFacultadesDecano(baseURL, numeroIdentificacion string) ([]string, error) {
+	urlFinal := strings.TrimRight(baseURL, "/") + "/" + strings.TrimSpace(numeroIdentificacion)
+	var resp models.DecanosXML
+	if err := request.GetXml(urlFinal, &resp); err != nil {
+		return nil, err
+	}
+
+	if len(resp.Decanos) == 0 {
+		return nil, fmt.Errorf("no se encontro informacion de decano para la identificacion %s", numeroIdentificacion)
+	}
+
+	facultades := make([]string, 0, len(resp.Decanos))
+	facultadesNormalizadas := make(map[string]struct{})
+
+	for _, decano := range resp.Decanos {
+		facultad := strings.TrimSpace(decano.Facultad)
+		if facultad == "" {
+			continue
+		}
+
+		facultadNormalizada := normalizarTexto(facultad)
+		if _, exists := facultadesNormalizadas[facultadNormalizada]; exists {
+			continue
+		}
+
+		facultadesNormalizadas[facultadNormalizada] = struct{}{}
+		facultades = append(facultades, facultad)
+	}
+
+	if len(facultades) == 0 {
+		return nil, fmt.Errorf("la respuesta XML no trajo facultad")
+	}
+
+	return facultades, nil
+}
+
 func consultarSolicitudesPorEstado(baseCrud, codigoEstado string) ([]map[string]interface{}, error) {
 	u, err := url.Parse(helpers.JoinURL(baseCrud, "/historico_estado_solicitud"))
 	if err != nil {
