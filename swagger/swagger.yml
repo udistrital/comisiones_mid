@@ -226,6 +226,25 @@ paths:
             $ref: '#/definitions/map[string]interface{}'
         "400":
           description: '{object} map[string]interface{}'
+  /solicitud/pendientes_decano/{numero_identificacion}:
+    get:
+      tags:
+      - solicitud
+      description: Retorna las solicitudes pendientes por revisar de un decano según su número de identificación
+      operationId: SolicitudPendienteDecanoController.Get Solicitudes Pendientes Decano
+      parameters:
+      - in: path
+        name: numero_identificacion
+        description: Número de identificación del decano
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
   /solicitud/pendientes_secretaria/{numero_identificacion}:
     get:
       tags:
