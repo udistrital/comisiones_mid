@@ -27,3 +27,16 @@ type PersonaXML struct {
 	CodigoDependencia string `xml:"codigo_dependencia"`
 	Nombres           string `xml:"nombres"`
 }
+
+type DecanosXML struct {
+	XMLName xml.Name    `xml:"facultad"`
+	Decanos []DecanoXML `xml:"decano"`
+}
+
+type DecanoXML struct {
+	FechaDesde     string `xml:"fecha_desde"`
+	CodigoFacultad string `xml:"codigo_facultad"`
+	Nombre         string `xml:"nombre"`
+	FechaHasta     string `xml:"fecha_hasta"`
+	Facultad       string `xml:"facultad"`
+}

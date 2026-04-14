@@ -115,6 +115,15 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudPendienteDecanoController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudPendienteDecanoController"],
+		beego.ControllerComments{
+			Method:           "GetSolicitudesPendientesDecano",
+			Router:           "/pendientes_decano/:numero_identificacion",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudPendienteSecretariaController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudPendienteSecretariaController"],
 		beego.ControllerComments{
 			Method:           "GetSolicitudesPendientesSecretaria",
