@@ -240,33 +240,68 @@ func (c *SolicitudController) SolicitudByIdentificacion() {
 // @Failure 403 body is empty
 // @router /detalles_solicitud/:id [get]
 func (c *SolicitudController) DetallesSolicitud() {
+
 	defer func() {
-		if err := recover(); err != nil {
-			logs.Error(err)
-			localError := err.(map[string]interface{})
-			fmt.Println("ERROR ", localError)
-			c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + "DetalleSolicitud" + "/" + (localError["error"]).(string))
-			c.Data["data"] = (localError["err"])
-			if status, ok := localError["status"]; ok {
-				c.Abort(strconv.Itoa(status.(int)))
-			} else {
-				c.Abort("404")
+		if r := recover(); r != nil {
+
+			logs.Error("ERROR:", r)
+
+			response := map[string]interface{}{
+				"Success": false,
+				"Status":  500,
+				"Message": "Error interno del servidor",
+				"Data":    nil,
 			}
+
+			if errMap, ok := r.(map[string]interface{}); ok {
+				if s, ok := errMap["status"].(int); ok {
+					response["Status"] = s
+				} else if s, ok := errMap["status"].(string); ok {
+					if parsed, err := strconv.Atoi(s); err == nil {
+						response["Status"] = parsed
+					}
+				}
+				if msg, ok := errMap["error"].(string); ok {
+					response["Message"] = msg
+				}
+				if data, ok := errMap["data"]; ok {
+					response["Data"] = data
+				}
+			}
+			statusCode := 500
+			if s, ok := response["Status"].(int); ok {
+				statusCode = s
+			}
+			c.Ctx.Output.SetStatus(statusCode)
+			c.Data["json"] = response
+			c.ServeJSON()
 		}
 	}()
-	idStr := c.Ctx.Input.Param(":id")
+
 	fmt.Println("ENTRA A BUSCAR")
+
+	idStr := c.Ctx.Input.Param(":id")
 	fmt.Println(idStr)
+
 	id, err := strconv.Atoi(idStr)
-	if err == nil {
-		if response, err := services.BuscarDetallesSolicitud(id); err == nil {
-			c.Ctx.Output.SetStatus(201)
-			c.Data["json"] = map[string]interface{}{"Success": true, "Status": "201", "Message": "Successful", "Data": response}
-		} else {
-			panic(err)
-		}
-	} else {
-		panic(err)
+	if err != nil {
+		panic(map[string]interface{}{
+			"error":  "Id inválido",
+			"status": 400,
+		})
+	}
+
+	response, apiError := services.BuscarDetallesSolicitud(id)
+	if apiError != nil {
+		panic(apiError)
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  200,
+		"Message": "Consulta exitosa",
+		"Data":    response,
 	}
 
 	c.ServeJSON()
