@@ -570,7 +570,6 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	if err != nil {
 		return respuesta, nil
 	}
-
 	data, ok := respuesta_historico["Data"].([]interface{})
 	if !ok || len(data) == 0 {
 		return models.SolicitudDetalles{}, map[string]interface{}{
@@ -640,6 +639,12 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 			for _, doc := range data_documentos {
 				if documento, ok := doc.(map[string]interface{}); ok {
 					idDocumentoComision := int(documento["Id"].(float64))
+					var rolDocumentoComision string
+					if hist, ok := documento["HistoricoEstadoSolicitudId"].(map[string]interface{}); ok {
+						if rol, ok := hist["RolUsuario"].(string); ok {
+							rolDocumentoComision = rol
+						}
+					}
 					docId := int(documento["DocumentoId"].(float64))
 					var detalle_doc map[string]interface{}
 					if err := request.GetJson(
@@ -650,8 +655,6 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 						if len(detalle_doc) == 0 {
 							continue
 						}
-						fmt.Println(".----------------")
-						fmt.Println(detalle_doc)
 						idDocumento := int(detalle_doc["Id"].(float64))
 						nombre, _ := detalle_doc["Nombre"].(string)
 						enlace, _ := detalle_doc["Enlace"].(string)
@@ -681,6 +684,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 						if nombre != "" && enlace != "" {
 							documento_aux := models.DocumentoDetalle{
 								Id:          idDocumentoComision,
+								Rol:         rolDocumentoComision,
 								IdDocumento: idDocumento,
 								Nombre:      nombre,
 								Enlace:      enlace,
@@ -693,6 +697,53 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 					}
 				}
 			}
+		} else {
+			respuesta.Documentos = []models.DocumentoDetalle{}
+		}
+	}
+
+	var respuesta_observaciones map[string]interface{}
+
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"observacion?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+
+			fmt.Sprintf("%d", id_solicitud)+",Activo:true",
+		&respuesta_observaciones,
+	); err == nil {
+
+		if data, ok := respuesta_observaciones["Data"].([]interface{}); ok && len(data) > 0 {
+
+			for _, item := range data {
+
+				observacionMap, ok := item.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				var idObservacion int
+				if v, ok := observacionMap["Id"].(float64); ok {
+					idObservacion = int(v)
+				}
+
+				var rolObservacion string
+				if hist, ok := observacionMap["HistoricoEstadoSolicitudId"].(map[string]interface{}); ok {
+					if rol, ok := hist["RolUsuario"].(string); ok {
+						rolObservacion = rol
+					}
+				}
+
+				descripcion, _ := observacionMap["Descripcion"].(string)
+
+				observacionAux := models.ObservacionDetalle{
+					Id:          idObservacion,
+					Rol:         rolObservacion,
+					Descripcion: descripcion,
+				}
+
+				respuesta.Observaciones = append(respuesta.Observaciones, observacionAux)
+			}
+		} else {
+			respuesta.Observaciones = []models.ObservacionDetalle{}
 		}
 	}
 
