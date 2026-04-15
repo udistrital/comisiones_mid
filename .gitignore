@@ -7,6 +7,9 @@
 *.dll
 *.so
 *.dylib
+comisiones_mid
+comisiones_mid.exe
+lastupdate.tmp
 
 # Test binary, built with `go test -c`
 *.test
@@ -25,7 +28,11 @@ go.work
 go.work.sum
 
 # env file
-.env
+*.env
+
+swagger/**
+!swagger/swagger.json
+!swagger/swagger.yml
 
 # Editor/IDE
 # .idea/
