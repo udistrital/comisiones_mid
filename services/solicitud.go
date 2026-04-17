@@ -6,6 +6,8 @@ import (
 
 	"encoding/json"
 
+	"strconv"
+
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
@@ -24,15 +26,25 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 		}
 	}()
 
-	var persona []map[string]interface{}
-	err := request.GetJson(beego.AppConfig.String("UrlTercerosCrud")+
-		"datos_identificacion?query=Numero:"+fmt.Sprintf("%d", solicitud.Identificacion), &persona)
+	var idsCreaciones models.IdsCreacionSolicitud
 
+	var persona []map[string]interface{}
+
+	resp, err := request.GetJsonTest(beego.AppConfig.String("UrlTercerosCrud")+"datos_identificacion?query=Numero:"+fmt.Sprintf("%d", solicitud.Identificacion), &persona)
 	if err != nil {
-		return respuesta, map[string]interface{}{"error": "Error consultando tercero", "detalle": err.Error()}
+		return respuesta, map[string]interface{}{
+			"error":   "Error consultando tercero",
+			"detalle": err.Error(),
+		}
+	}
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return respuesta, map[string]interface{}{
+			"error":  "Error en respuesta del servicio",
+			"status": resp.StatusCode,
+		}
 	}
 
-	if len(persona) == 0 {
+	if len(persona) == 0 || len(persona[0]) == 0 {
 		return respuesta, map[string]interface{}{"error": "No se encontró el tercero"}
 	}
 
@@ -52,7 +64,6 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 		ObservacionCierre: solicitud.Observacion,
 	}
 	var respSolicitud map[string]interface{}
-
 	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud", "POST", &respSolicitud, &req)
 	if err != nil {
 		return respuesta, map[string]interface{}{
@@ -82,6 +93,9 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	idSolicitud := int(idSolicitudFloat)
+	idsCreaciones.IdSolicitud = idSolicitud
+	fmt.Println("SOLICITUD CREADA")
+	fmt.Println(idsCreaciones.IdSolicitud)
 	solicitudTemp := models.Solicitud{Id: idSolicitud, ObservacionCierre: solicitud.Observacion}
 
 	formularioBytes, _ := json.Marshal(solicitud.Formulario)
@@ -91,19 +105,89 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 		Formulario:  string(formularioBytes),
 		Activo:      true,
 	}
-
 	var respDetalle map[string]interface{}
-	err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud", "POST", &respDetalle, &detalle)
+	if err := request.SendJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud",
+		"POST",
+		&respDetalle,
+		&detalle,
+	); err != nil {
 
-	if err != nil {
-		return respuesta, map[string]interface{}{"error": "Error creando detalle", "detalle": err.Error()}
+		EliminarCreacionesSolicitud(idsCreaciones)
+
+		return respuesta, map[string]interface{}{
+			"detalle": "Error creando detalle solicitud",
+			"error":   err.Error(),
+		}
 	}
+
+	fmt.Println(respDetalle)
+
+	success, _ := respDetalle["Success"].(bool)
+
+	var status int
+	switch v := respDetalle["Status"].(type) {
+	case float64:
+		status = int(v)
+	case string:
+		s, _ := strconv.Atoi(v)
+		status = s
+	default:
+		status = 0
+	}
+
+	fmt.Println("STATUS:", status)
+
+	if !success || !(status == 200 || status == 201) {
+		EliminarCreacionesSolicitud(idsCreaciones)
+		return respuesta, map[string]interface{}{
+			"error":  "Error en servicio detalle",
+			"status": status,
+		}
+	}
+
+	var errorCreacionSolicitudDetalle map[string]interface{}
+	dataDetalle, errorCreacionSolicitudDetalle := helpers.ValidarRespuesta(respDetalle)
+	if errorCreacionSolicitudDetalle != nil {
+		EliminarCreacionesSolicitud(idsCreaciones)
+		return respuesta, errorCreacionSolicitudDetalle
+	}
+	idRawDetalle, ok := dataDetalle["Id"]
+	if !ok {
+		EliminarCreacionesSolicitud(idsCreaciones)
+		return respuesta, map[string]interface{}{
+			"error": "No se encontró Id en la respuesta",
+		}
+	}
+
+	idSolicitudDetalleFloat, ok := idRawDetalle.(float64)
+	if !ok {
+		EliminarCreacionesSolicitud(idsCreaciones)
+		return respuesta, map[string]interface{}{
+			"error": "Id con tipo inválido",
+		}
+	}
+
+	idSolicitudDetalle := int(idSolicitudDetalleFloat)
+	idsCreaciones.IdDetalleSolicitud = idSolicitudDetalle
+	fmt.Println(idsCreaciones.IdDetalleSolicitud)
 
 	var respEstado map[string]interface{}
-	err = request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"estado_solicitud?query=CodigoAbreviacion:NO_ENV", &respEstado)
+	resp, err = request.GetJsonTest(beego.AppConfig.String("UrlComisionesCrud")+"estado_solicitudAAAA?query=CodigoAbreviacion:NO_ENV", &respEstado)
 	if err != nil {
-		return respuesta, map[string]interface{}{"error": "Error consultando estado"}
+		fmt.Println("ERROR 1")
+		EliminarCreacionesSolicitud(idsCreaciones)
+		return respuesta, map[string]interface{}{"detalle": "Error consultando estado", "error": err.Error()}
 	}
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		fmt.Println("ERROR 2")
+		EliminarCreacionesSolicitud(idsCreaciones)
+		return respuesta, map[string]interface{}{
+			"error":  "Error en respuesta del servicio",
+			"status": resp.StatusCode,
+		}
+	}
+
 	dataEstado := respEstado["Data"].([]interface{})
 	id_estado := int(dataEstado[0].(map[string]interface{})["Id"].(float64))
 	historico := models.HistoricoEstadoSolicitud{
@@ -159,6 +243,36 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	return solicitudTemp, nil
+}
+
+func EliminarCreacionesSolicitud(ids models.IdsCreacionSolicitud) {
+	fmt.Println("ENTRA A ELIMINAR")
+	fmt.Println(ids)
+	if ids.IdDetalleSolicitud != 0 {
+		var respuestaDeleteSolicitudDetalle map[string]interface{}
+		err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud/"+strconv.Itoa(ids.IdDetalleSolicitud), "DELETE", &respuestaDeleteSolicitudDetalle, nil)
+		if err != nil {
+			fmt.Println("SE BORRA EL DETALLE SOLICITUD")
+		}
+		fmt.Println("HIZO LA ELIMINACION DETALLE")
+		if ids.IdSolicitud != 0 {
+			var respuestaDeleteSolicitud map[string]interface{}
+			err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud/"+strconv.Itoa(ids.IdSolicitud), "DELETE", &respuestaDeleteSolicitud, nil)
+			if err != nil {
+				fmt.Println("SE BORRA LA SOLICITUD")
+			}
+			fmt.Println("HIZO LA ELIMINACION")
+		}
+	} else {
+		if ids.IdSolicitud != 0 {
+			var respuestaDeleteSolicitud map[string]interface{}
+			err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud/"+strconv.Itoa(ids.IdSolicitud), "DELETE", &respuestaDeleteSolicitud, nil)
+			if err != nil {
+				fmt.Println("SE BORRA LA SOLICITUD")
+			}
+			fmt.Println("HIZO LA ELIMINACION")
+		}
+	}
 }
 
 func EditarSolicitud(solicitudId int, req models.EditarSolicitud) (models.EditarSolicitudResponse, error) {

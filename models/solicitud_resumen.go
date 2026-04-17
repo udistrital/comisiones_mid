@@ -6,5 +6,5 @@ type SolicitudResumen struct {
 	Programa        string           `json:"programa"`
 	Nombre          string           `json:"nombre"`
 	FechaCreacion   string           `json:"fecha_creacion"`
-	EstadoSolicitud *EstadoSolicitud `json:"esado_solicitud"`
+	EstadoSolicitud *EstadoSolicitud `json:"estado_solicitud"`
 }

@@ -113,7 +113,7 @@ func ValidarRespuesta(resp map[string]interface{}) (map[string]interface{}, map[
 			"Status":  status,
 			"Message": "Error en servicio externo",
 			"Data":    resp["Data"],
-			"Raw":     resp, // 🔥 útil para debug
+			"Raw":     resp, 
 		}
 	}
 
