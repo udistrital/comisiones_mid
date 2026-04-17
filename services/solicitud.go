@@ -173,7 +173,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	fmt.Println(idsCreaciones.IdDetalleSolicitud)
 
 	var respEstado map[string]interface{}
-	resp, err = request.GetJsonTest(beego.AppConfig.String("UrlComisionesCrud")+"estado_solicitudAAAA?query=CodigoAbreviacion:NO_ENV", &respEstado)
+	resp, err = request.GetJsonTest(beego.AppConfig.String("UrlComisionesCrud")+"estado_solicitud?query=CodigoAbreviacion:NO_ENV", &respEstado)
 	if err != nil {
 		fmt.Println("ERROR 1")
 		EliminarCreacionesSolicitud(idsCreaciones)
