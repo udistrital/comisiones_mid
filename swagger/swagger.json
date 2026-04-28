@@ -194,6 +194,37 @@
                 }
             }
         },
+        "/solicitud/documento_solicitud/estado": {
+            "put": {
+                "tags": [
+                    "solicitud"
+                ],
+                "description": "Actualiza el estado de un documento asociado a una solicitud",
+                "operationId": "SolicitudController.Actualizar estado documento_solicitud",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Payload de actualizacion",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ActualizarEstadoDocumentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request"
+                    }
+                }
+            }
+        },
         "/solicitud/estados": {
             "post": {
                 "tags": [
@@ -453,6 +484,10 @@
     "definitions": {
         "map[string]interface{}": {
             "title": "map[string]interface{}",
+            "type": "object"
+        },
+        "models.ActualizarEstadoDocumentoRequest": {
+            "title": "ActualizarEstadoDocumentoRequest",
             "type": "object"
         },
         "models.Comision": {
