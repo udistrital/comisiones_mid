@@ -15,6 +15,90 @@
     },
     "basePath": "/v1",
     "paths": {
+        "/seguimiento/comisiones_decano/{cedula}": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna las comisiones de las facultades asignadas al decano, segun su cedula y datos del JBPM.",
+                "operationId": "ComisionSeguimientoController.Get Comisiones Decano",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "cedula",
+                        "description": "Numero de cedula del decano",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/seguimiento/comisiones_docente/{cedula}": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna las comisiones activas del docente identificado por su numero de cedula.",
+                "operationId": "ComisionSeguimientoController.Get Comisiones Docente",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "cedula",
+                        "description": "Numero de cedula del docente",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/seguimiento/comisiones_secretaria_general": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna todas las comisiones activas con su estado actual. Usado por secretaria general/academica.",
+                "operationId": "ComisionSeguimientoController.Get Comisiones Secretaria General",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
         "/solicitud/": {
             "get": {
                 "tags": [
@@ -560,5 +644,11 @@
                 }
             }
         }
-    }
+    },
+    "tags": [
+        {
+            "name": "seguimiento",
+            "description": "ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).\nTodos los endpoints estan bajo el namespace /v1/seguimiento.\n"
+        }
+    ]
 }
