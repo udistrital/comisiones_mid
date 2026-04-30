@@ -145,15 +145,12 @@ func obtenerTodasLasComisiones(baseCrud string) ([]models.ComisionBandeja, error
 		// Estado actual de la comision
 		estadoStr := ""
 		if estadoObj, ok := row["EstadoComisionId"].(map[string]interface{}); ok {
-			estadoStr = bandejaStr(estadoObj["CodigoAbreviacion"])
-			if estadoStr == "" {
-				estadoStr = bandejaStr(estadoObj["Nombre"])
-			}
+			estadoStr = mapEstadoComision(bandejaStr(estadoObj["CodigoAbreviacion"]))
 		}
 
 		// Fechas de comision — pueden ser nulas si la tabla aun no fue poblada
-		fechaInicio := bandejaStr(comisionObj["FechaInicio"])
-		fechaFin := bandejaStr(comisionObj["FechaFinal"])
+		fechaInicio := formatearFecha(comisionObj["FechaInicio"])
+		fechaFin := formatearFecha(comisionObj["FechaFinal"])
 
 		// Buscar la solicitud que origino esta comision
 		solicitudObj, err := buscarSolicitudPorComisionId(baseCrud, comisionId)
@@ -170,7 +167,7 @@ func obtenerTodasLasComisiones(baseCrud string) ([]models.ComisionBandeja, error
 
 		solicitudId, _ := strconv.Atoi(fmt.Sprintf("%v", solicitudObj["Id"]))
 		terceroId, _ := strconv.Atoi(fmt.Sprintf("%v", solicitudObj["TerceroId"]))
-		fechaSolicitud := bandejaStr(solicitudObj["FechaCreacion"])
+		fechaSolicitud := formatearFecha(solicitudObj["FechaCreacion"])
 
 		// Extraer datos del docente desde el formulario
 		var docente, idDocente, programa, facultad string
@@ -247,4 +244,38 @@ func bandejaStr(v interface{}) string {
 		return ""
 	}
 	return s
+}
+
+// formatearFecha normaliza un timestamp a YYYY-MM-DD.
+// Soporta "2026-03-20 09:13:44..." (Go) y "2026-01-15T00:00:00Z" (ISO 8601).
+func formatearFecha(v interface{}) string {
+	s := bandejaStr(v)
+	if len(s) >= 10 {
+		return s[:10]
+	}
+	return s
+}
+
+// mapEstadoComision convierte el CodigoAbreviacion del CRUD al valor EstadoComision
+// que espera el front de seguimiento (models/estados.model.ts).
+// Actualizar esta tabla cuando se agreguen nuevos estados al CRUD.
+func mapEstadoComision(codigo string) string {
+	switch codigo {
+	case "COM_INI":
+		return "EN_EJECUCION"
+	case "COM_FIN":
+		return "FINALIZADA"
+	case "COM_CAN":
+		return "CANCELADA"
+	case "COM_PRR_SOL":
+		return "PRORROGA_SOLICITADA"
+	case "COM_PRR_APR":
+		return "PRORROGA_APROBADA"
+	case "COM_REV":
+		return "EN_REVISION"
+	case "COM_INC":
+		return "INCUMPLIDA"
+	default:
+		return "PENDIENTE"
+	}
 }
