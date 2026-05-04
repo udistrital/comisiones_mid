@@ -48,14 +48,14 @@ func TestCambiarEstadoSolicitud(t *testing.T) {
 		defer monkey.UnpatchAll()
 
 		req := models.CambioEstadoSolicitudRequest{
-			NuevoEstado:          "APROB_JEFE",
-			RolUsuario:           "JEFE",
+			NuevoEstado:          "REV_SEC_ACAD",
+			RolUsuario:           "COORDINADOR",
 			NumeroIdentificacion: "123456789",
 			Observacion:          "Cambio aprobado",
 			Documentos: []models.DocumentoCambioEstadoRequest{
 				{
-					IdTipoDocumento: 10,
-					TipoDocumento:   "ACTA",
+					IdTipoDocumento: 193,
+					TipoDocumento:   "ACT_COO",
 					EstadoDocumento: "CARGADO",
 					Nombre:          "acta.pdf",
 					Descripcion:     "Documento soporte",
@@ -206,8 +206,8 @@ func TestCambiarEstadoSolicitud(t *testing.T) {
 		defer monkey.UnpatchAll()
 
 		req := models.CambioEstadoSolicitudRequest{
-			NuevoEstado:          "APROB_JEFE",
-			RolUsuario:           "JEFE",
+			NuevoEstado:          "REV_PROY",
+			RolUsuario:           "DOCENTE",
 			NumeroIdentificacion: "123456789",
 		}
 
@@ -234,13 +234,13 @@ func TestCambiarEstadoSolicitud(t *testing.T) {
 		defer monkey.UnpatchAll()
 
 		req := models.CambioEstadoSolicitudRequest{
-			NuevoEstado:          "APROB_JEFE",
-			RolUsuario:           "JEFE",
+			NuevoEstado:          "REV_SEC_ACAD",
+			RolUsuario:           "COORDINADOR",
 			NumeroIdentificacion: "123456789",
 			Documentos: []models.DocumentoCambioEstadoRequest{
 				{
-					IdTipoDocumento: 10,
-					TipoDocumento:   "ACTA",
+					IdTipoDocumento: 193,
+					TipoDocumento:   "ACT_COO",
 					EstadoDocumento: "CARGADO",
 					Nombre:          "acta.pdf",
 					File:            "archivo-base64",
@@ -323,8 +323,8 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 
 		documentosReq := []models.DocumentoCambioEstadoRequest{
 			{
-				IdTipoDocumento: 10,
-				TipoDocumento:   "ACTA",
+				IdTipoDocumento: 193,
+				TipoDocumento:   "ACT_COO",
 				EstadoDocumento: "CARGADO",
 				Nombre:          "acta.pdf",
 				Descripcion:     "Documento soporte",
@@ -343,7 +343,7 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 
 		monkey.Patch(services.GetIdByCodigoAbreviacion, func(base, recurso, codigo string) (int, error) {
 			switch {
-			case recurso == "tipo_documento_solicitud" && codigo == "ACTA":
+			case recurso == "tipo_documento_solicitud" && codigo == "ACT_COO":
 				return 21, nil
 			case recurso == "estado_documento" && codigo == "CARGADO":
 				return 31, nil
@@ -385,7 +385,7 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 
 		documentosReq := []models.DocumentoCambioEstadoRequest{
 			{
-				IdTipoDocumento: 10,
+				IdTipoDocumento: 193,
 				Nombre:          "acta.pdf",
 				File:            "archivo-base64",
 			},
