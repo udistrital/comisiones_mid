@@ -107,13 +107,13 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 	var respDetalle map[string]interface{}
 	if err := request.SendJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud",
+		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitudAAAAA",
 		"POST",
 		&respDetalle,
 		&detalle,
 	); err != nil {
 
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarSolicitud(idsCreaciones)
 
 		return respuesta, map[string]interface{}{
 			"detalle": "Error creando detalle solicitud",
@@ -139,7 +139,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	fmt.Println("STATUS:", status)
 
 	if !success || !(status == 200 || status == 201) {
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarSolicitud(idsCreaciones)
 		return respuesta, map[string]interface{}{
 			"error":  "Error en servicio detalle",
 			"status": status,
@@ -149,12 +149,12 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	var errorCreacionSolicitudDetalle map[string]interface{}
 	dataDetalle, errorCreacionSolicitudDetalle := helpers.ValidarRespuesta(respDetalle)
 	if errorCreacionSolicitudDetalle != nil {
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarSolicitud(idsCreaciones)
 		return respuesta, errorCreacionSolicitudDetalle
 	}
 	idRawDetalle, ok := dataDetalle["Id"]
 	if !ok {
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarSolicitud(idsCreaciones)
 		return respuesta, map[string]interface{}{
 			"error": "No se encontró Id en la respuesta",
 		}
@@ -162,7 +162,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 
 	idSolicitudDetalleFloat, ok := idRawDetalle.(float64)
 	if !ok {
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarSolicitud(idsCreaciones)
 		return respuesta, map[string]interface{}{
 			"error": "Id con tipo inválido",
 		}
@@ -176,12 +176,12 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	resp, err = request.GetJsonTest(beego.AppConfig.String("UrlComisionesCrud")+"estado_solicitud?query=CodigoAbreviacion:NO_ENV", &respEstado)
 	if err != nil {
 		fmt.Println("ERROR 1")
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarDetalleSolicitud(idsCreaciones)
 		return respuesta, map[string]interface{}{"detalle": "Error consultando estado", "error": err.Error()}
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
 		fmt.Println("ERROR 2")
-		EliminarCreacionesSolicitud(idsCreaciones)
+		EliminarDetalleSolicitud(idsCreaciones)
 		return respuesta, map[string]interface{}{
 			"error":  "Error en respuesta del servicio",
 			"status": resp.StatusCode,
@@ -245,9 +245,20 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	return solicitudTemp, nil
 }
 
-func EliminarCreacionesSolicitud(ids models.IdsCreacionSolicitud) {
+func EliminarSolicitud(ids models.IdsCreacionSolicitud) {
 	fmt.Println("ENTRA A ELIMINAR")
 	fmt.Println(ids)
+	if ids.IdSolicitud != 0 {
+		var respuestaDeleteSolicitud map[string]interface{}
+		err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud/"+strconv.Itoa(ids.IdSolicitud), "DELETE", &respuestaDeleteSolicitud, nil)
+		if err != nil {
+			fmt.Println("SE BORRA LA SOLICITUD")
+		}
+		fmt.Println("HIZO LA ELIMINACION")
+	}
+}
+
+func EliminarDetalleSolicitud(ids models.IdsCreacionSolicitud) {
 	if ids.IdDetalleSolicitud != 0 {
 		var respuestaDeleteSolicitudDetalle map[string]interface{}
 		err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud/"+strconv.Itoa(ids.IdDetalleSolicitud), "DELETE", &respuestaDeleteSolicitudDetalle, nil)
@@ -256,21 +267,7 @@ func EliminarCreacionesSolicitud(ids models.IdsCreacionSolicitud) {
 		}
 		fmt.Println("HIZO LA ELIMINACION DETALLE")
 		if ids.IdSolicitud != 0 {
-			var respuestaDeleteSolicitud map[string]interface{}
-			err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud/"+strconv.Itoa(ids.IdSolicitud), "DELETE", &respuestaDeleteSolicitud, nil)
-			if err != nil {
-				fmt.Println("SE BORRA LA SOLICITUD")
-			}
-			fmt.Println("HIZO LA ELIMINACION")
-		}
-	} else {
-		if ids.IdSolicitud != 0 {
-			var respuestaDeleteSolicitud map[string]interface{}
-			err := request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud/"+strconv.Itoa(ids.IdSolicitud), "DELETE", &respuestaDeleteSolicitud, nil)
-			if err != nil {
-				fmt.Println("SE BORRA LA SOLICITUD")
-			}
-			fmt.Println("HIZO LA ELIMINACION")
+			EliminarSolicitud(ids)
 		}
 	}
 }
