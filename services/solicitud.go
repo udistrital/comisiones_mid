@@ -570,7 +570,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 					id_tercero_busqueda := int(id_tercero)
 
 					fmt.Println("ENTRA A SERVICIO ", beego.AppConfig.String("UrlComisionesCrud")+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda)+"&limit=-1")
-					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
+					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
 						&persona); err == nil {
 						fmt.Println("ENTRA A SERVICIO 2 ", persona)
 						if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {
@@ -742,7 +742,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	var respuesta_documentos map[string]interface{}
 
 	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true",
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true&limit=-1",
 		&respuesta_documentos,
 	); err == nil {
 
