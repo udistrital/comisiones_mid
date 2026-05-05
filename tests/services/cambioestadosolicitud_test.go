@@ -577,61 +577,70 @@ func TestCrearDocumentoSolicitud(t *testing.T) {
 }
 
 func TestGetHistoricoActivoActual(t *testing.T) {
+	t.Log("Inicio TestGetHistoricoActivoActual")
+
 	t.Run("Caso 1: consulta exitosa del historico activo", func(t *testing.T) {
-		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
-			u, err := url.Parse(rawURL)
-			if err != nil {
-				return err
-			}
-			if u.Path != "/historico_estado_solicitud" {
-				t.Fatalf("Path no esperado: %s", u.Path)
-			}
-			if u.Query().Get("query") != "SolicitudId:10,Activo:true" {
-				t.Fatalf("Query no esperada: %s", u.Query().Get("query"))
-			}
+		monkey.Patch(request.GetJson, func(url string, target interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud?limit=1&order=desc&query=SolicitudId%3A10%2CActivo%3Atrue&sortby=FechaCreacion"
 
-			*(target.(*map[string]interface{})) = map[string]interface{}{
-				"Data": []interface{}{
-					map[string]interface{}{
-						"Id":     float64(44),
-						"Activo": true,
+			if url == expectedURL {
+				*target.(*map[string]interface{}) = map[string]interface{}{
+					"Data": []interface{}{
+						map[string]interface{}{
+							"Id":     float64(44),
+							"Activo": true,
+						},
 					},
-				},
+				}
+				return nil
 			}
-			return nil
-		})
 
-		row, err := services.GetHistoricoActivoActual(parameters.UrlComisionesCrud, 10)
+			return errors.New("URL no esperada")
+		})
+		defer monkey.Unpatch(request.GetJson)
+
+		row, err := services.GetHistoricoActivoActual(baseCrud, 10)
+
 		if err != nil {
-			t.Fatalf("No se esperaba error y se obtuvo %v", err)
+			t.Errorf("No se esperaba error, pero se obtuvo: %v", err)
 		}
+
 		if row == nil {
-			t.Fatal("Se esperaba historico y se obtuvo nil")
+			t.Fatal("Se esperaba un historico activo, pero se obtuvo nil")
 		}
+
 		if row["Id"] != float64(44) {
-			t.Errorf("Se esperaba Id 44 y se obtuvo %v", row["Id"])
+			t.Errorf("Se esperaba Id 44, pero se obtuvo: %v", row["Id"])
 		}
+
+		t.Log("Consulta de historico activo ejecutada exitosamente")
 	})
 
 	t.Run("Caso 2: error al consultar historico activo", func(t *testing.T) {
-		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
-			return errors.New("error consultando historico")
+		monkey.Patch(request.GetJson, func(url string, target interface{}) error {
+			return errors.New("Error consultando historico activo")
 		})
+		defer monkey.Unpatch(request.GetJson)
 
-		row, err := services.GetHistoricoActivoActual(parameters.UrlComisionesCrud, 10)
+		row, err := services.GetHistoricoActivoActual(baseCrud, 10)
+
 		if err == nil {
-			t.Fatal("Se esperaba error y no se obtuvo")
+			t.Error("Se esperaba error, pero no se obtuvo")
 		}
-		if !strings.Contains(err.Error(), "error consultando histórico actual") && !strings.Contains(err.Error(), "error consultando hist") {
-			t.Errorf("Se esperaba error de historico y se obtuvo %v", err)
+
+		if err != nil && !strings.Contains(err.Error(), "error consultando hist") {
+			t.Errorf("Se esperaba un error relacionado con historico activo, pero se obtuvo: %v", err)
 		}
+
 		if row != nil {
-			t.Errorf("Se esperaba row nil y se obtuvo %v", row)
+			t.Errorf("Se esperaba row nil, pero se obtuvo: %v", row)
 		}
+
+		t.Log("Test de error en consulta de historico activo ejecutado correctamente")
 	})
 }
 
