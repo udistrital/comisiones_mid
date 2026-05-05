@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	bou.ke/monkey v1.0.2
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.3 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.6 // indirect

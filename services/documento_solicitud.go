@@ -71,7 +71,7 @@ func CrearDocumentosSolicitud(
 
 		var tipoDocumentoSolicitudId int
 		if strings.TrimSpace(documentosReq[i].TipoDocumento) != "" {
-			tipoDocumentoSolicitudId, err = getIdByCodigoAbreviacion(
+			tipoDocumentoSolicitudId, err = GetIdByCodigoAbreviacion(
 				baseCrud,
 				"tipo_documento_solicitud",
 				documentosReq[i].TipoDocumento,
@@ -83,7 +83,7 @@ func CrearDocumentosSolicitud(
 
 		var estadoDocumentoId int
 		if strings.TrimSpace(documentosReq[i].EstadoDocumento) != "" {
-			estadoDocumentoId, err = getIdByCodigoAbreviacion(
+			estadoDocumentoId, err = GetIdByCodigoAbreviacion(
 				baseCrud,
 				"estado_documento",
 				documentosReq[i].EstadoDocumento,
@@ -93,7 +93,7 @@ func CrearDocumentosSolicitud(
 			}
 		}
 
-		documentoSolicitudId, err := crearDocumentoSolicitud(
+		documentoSolicitudId, err := CrearDocumentoSolicitud(
 			baseCrud,
 			historicoNuevoId,
 			documentoId,
@@ -138,7 +138,7 @@ func ActualizarEstadoDocumento(req models.ActualizarEstadoDocumentoSolicitudRequ
 		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("respuesta invalida al consultar documento_solicitud %d", req.DocumentoSolicitudId)
 	}
 
-	estadoNuevoId, err := getIdByCodigoAbreviacion(baseCrud, "estado_documento", req.EstadoDocumentoCodigo)
+	estadoNuevoId, err := GetIdByCodigoAbreviacion(baseCrud, "estado_documento", req.EstadoDocumentoCodigo)
 	if err != nil {
 		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDocumentoCodigo=%s: %v", req.EstadoDocumentoCodigo, err)
 	}
