@@ -2,12 +2,8 @@ package services_test
 
 import (
 	"errors"
-	"flag"
 	"net/url"
-	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -19,34 +15,9 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
-var parameters struct {
-	UrlComisionesCrud string
-	UrlTercerosCrud   string
-}
-
-func TestMain(m *testing.M) {
-	parameters.UrlComisionesCrud = os.Getenv("UrlComisionesCrud")
-	parameters.UrlTercerosCrud = os.Getenv("UrlTercerosCrud")
-
-	_, file, _, _ := runtime.Caller(0)
-	apppath, _ := filepath.Abs(filepath.Join(filepath.Dir(file), "../.."))
-	beego.TestBeegoInit(apppath)
-
-	if parameters.UrlComisionesCrud != "" {
-		_ = beego.AppConfig.Set("UrlComisionesCrud", parameters.UrlComisionesCrud)
-	}
-	if parameters.UrlTercerosCrud != "" {
-		_ = beego.AppConfig.Set("UrlTercerosCrud", parameters.UrlTercerosCrud)
-	}
-
-	flag.Parse()
-	os.Exit(m.Run())
-}
-
 func TestCambiarEstadoSolicitud(t *testing.T) {
 	t.Run("Caso 1: cambio de estado exitoso con observacion y documentos", func(t *testing.T) {
 		defer monkey.UnpatchAll()
-
 		req := models.CambioEstadoSolicitudRequest{
 			NuevoEstado:          "REV_SEC_ACAD",
 			RolUsuario:           "COORDINADOR",
@@ -167,6 +138,9 @@ func TestCambiarEstadoSolicitud(t *testing.T) {
 		monkey.Patch(services.CrearComision, func(baseCrud string, solicitudId int, terceroId int, rolUsuario string) (int, error) {
 			return 0, nil
 		})
+
+		_ = beego.AppConfig.Set("UrlComisionesCrud", "http://comisiones_mid/")
+		_ = beego.AppConfig.Set("UrlTercerosCrud", "http://terceros_mid/")
 
 		resp, err := services.CambiarEstadoSolicitud(10, req)
 		if err != nil {
@@ -320,7 +294,7 @@ func TestCambiarEstadoSolicitud(t *testing.T) {
 func TestCrearDocumentosCambioEstado(t *testing.T) {
 	t.Run("Caso 1: creacion exitosa de documentos", func(t *testing.T) {
 		defer monkey.UnpatchAll()
-
+		baseCrud := "http://comisiones_mid/"
 		documentosReq := []models.DocumentoCambioEstadoRequest{
 			{
 				IdTipoDocumento: 193,
@@ -342,6 +316,9 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 		})
 
 		monkey.Patch(services.GetIdByCodigoAbreviacion, func(base, recurso, codigo string) (int, error) {
+			if base != baseCrud {
+				t.Fatalf("Se esperaba base %s y se obtuvo %s", baseCrud, base)
+			}
 			switch {
 			case recurso == "tipo_documento_solicitud" && codigo == "ACT_COO":
 				return 21, nil
@@ -352,7 +329,10 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 			}
 		})
 
-		monkey.Patch(services.CrearDocumentoSolicitud, func(baseCrud string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
+		monkey.Patch(services.CrearDocumentoSolicitud, func(base string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
+			if base != baseCrud {
+				t.Fatalf("Se esperaba base %s y se obtuvo %s", baseCrud, base)
+			}
 			if historicoId != 44 {
 				t.Fatalf("Se esperaba historicoId 44 y se obtuvo %d", historicoId)
 			}
@@ -368,7 +348,7 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 			return 801, nil
 		})
 
-		documentoIds, documentoSolicitudIds, err := services.CrearDocumentosCambioEstado(parameters.UrlComisionesCrud, 44, documentosReq)
+		documentoIds, documentoSolicitudIds, err := services.CrearDocumentosCambioEstado(baseCrud, 44, documentosReq)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -382,6 +362,7 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 
 	t.Run("Caso 2: error al crear documentos en gestor documental", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
 		documentosReq := []models.DocumentoCambioEstadoRequest{
 			{
@@ -398,7 +379,7 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 			}
 		})
 
-		documentoIds, documentoSolicitudIds, err := services.CrearDocumentosCambioEstado(parameters.UrlComisionesCrud, 44, documentosReq)
+		documentoIds, documentoSolicitudIds, err := services.CrearDocumentosCambioEstado(baseCrud, 44, documentosReq)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
@@ -417,17 +398,12 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 func TestGetIdByCodigoAbreviacion(t *testing.T) {
 	t.Run("Caso 1: consulta exitosa del id", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
 		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
-			u, err := url.Parse(rawURL)
-			if err != nil {
-				return err
-			}
-			if u.Path != "/estado_solicitud" {
-				t.Fatalf("Se esperaba path /estado_solicitud y se obtuvo %s", u.Path)
-			}
-			if u.Query().Get("query") != "CodigoAbreviacion:APROB_JEFE,Activo:true" {
-				t.Fatalf("Query no esperada: %s", u.Query().Get("query"))
+			expectedURL := "http://comisiones_mid/estado_solicitud?limit=1&query=CodigoAbreviacion%3AAPROB_JEFE%2CActivo%3Atrue"
+			if rawURL != expectedURL {
+				return errors.New("URL no esperada")
 			}
 
 			*(target.(*map[string]interface{})) = map[string]interface{}{
@@ -438,7 +414,7 @@ func TestGetIdByCodigoAbreviacion(t *testing.T) {
 			return nil
 		})
 
-		id, err := services.GetIdByCodigoAbreviacion(parameters.UrlComisionesCrud, "estado_solicitud", "APROB_JEFE")
+		id, err := services.GetIdByCodigoAbreviacion(baseCrud, "estado_solicitud", "APROB_JEFE")
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -449,12 +425,13 @@ func TestGetIdByCodigoAbreviacion(t *testing.T) {
 
 	t.Run("Caso 2: error al consultar el id", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
 		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
 			return errors.New("servicio no disponible")
 		})
 
-		id, err := services.GetIdByCodigoAbreviacion(parameters.UrlComisionesCrud, "estado_solicitud", "APROB_JEFE")
+		id, err := services.GetIdByCodigoAbreviacion(baseCrud, "estado_solicitud", "APROB_JEFE")
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
@@ -470,17 +447,12 @@ func TestGetIdByCodigoAbreviacion(t *testing.T) {
 func TestGetTerceroIdByNumeroIdentificacion(t *testing.T) {
 	t.Run("Caso 1: consulta exitosa del tercero", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseTerceros := "http://terceros_mid/"
 
 		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
-			u, err := url.Parse(rawURL)
-			if err != nil {
-				return err
-			}
-			if u.Path != "/datos_identificacion" {
-				t.Fatalf("Se esperaba path /datos_identificacion y se obtuvo %s", u.Path)
-			}
-			if u.Query().Get("query") != "numero:123456789" {
-				t.Fatalf("Query no esperada: %s", u.Query().Get("query"))
+			expectedURL := "http://terceros_mid/datos_identificacion?limit=1&query=numero%3A123456789"
+			if rawURL != expectedURL {
+				return errors.New("URL no esperada")
 			}
 
 			*(target.(*interface{})) = map[string]interface{}{
@@ -495,7 +467,7 @@ func TestGetTerceroIdByNumeroIdentificacion(t *testing.T) {
 			return nil
 		})
 
-		id, err := services.GetTerceroIdByNumeroIdentificacion(parameters.UrlTercerosCrud, "123456789")
+		id, err := services.GetTerceroIdByNumeroIdentificacion(baseTerceros, "123456789")
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -506,12 +478,13 @@ func TestGetTerceroIdByNumeroIdentificacion(t *testing.T) {
 
 	t.Run("Caso 2: error al consultar tercero", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseTerceros := "http://terceros_mid/"
 
 		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
 			return errors.New("servicio terceros no disponible")
 		})
 
-		id, err := services.GetTerceroIdByNumeroIdentificacion(parameters.UrlTercerosCrud, "123456789")
+		id, err := services.GetTerceroIdByNumeroIdentificacion(baseTerceros, "123456789")
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
@@ -527,10 +500,12 @@ func TestGetTerceroIdByNumeroIdentificacion(t *testing.T) {
 func TestCrearDocumentoSolicitud(t *testing.T) {
 	t.Run("Caso 1: creacion exitosa de documento solicitud", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
 		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
-			if !strings.HasSuffix(rawURL, "/documento_solicitud") {
-				t.Fatalf("URL no esperada: %s", rawURL)
+			expectedURL := "http://comisiones_mid/documento_solicitud"
+			if rawURL != expectedURL {
+				return errors.New("URL no esperada")
 			}
 			if method != "POST" {
 				t.Fatalf("Metodo no esperado: %s", method)
@@ -547,7 +522,7 @@ func TestCrearDocumentoSolicitud(t *testing.T) {
 			return nil
 		})
 
-		id, err := services.CrearDocumentoSolicitud(parameters.UrlComisionesCrud, 44, 501, 21, 31)
+		id, err := services.CrearDocumentoSolicitud(baseCrud, 44, 501, 21, 31)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -558,12 +533,13 @@ func TestCrearDocumentoSolicitud(t *testing.T) {
 
 	t.Run("Caso 2: error al crear documento solicitud", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
 		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
 			return errors.New("error en documento_solicitud")
 		})
 
-		id, err := services.CrearDocumentoSolicitud(parameters.UrlComisionesCrud, 44, 501, 21, 31)
+		id, err := services.CrearDocumentoSolicitud(baseCrud, 44, 501, 21, 31)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
@@ -577,8 +553,6 @@ func TestCrearDocumentoSolicitud(t *testing.T) {
 }
 
 func TestGetHistoricoActivoActual(t *testing.T) {
-	t.Log("Inicio TestGetHistoricoActivoActual")
-
 	t.Run("Caso 1: consulta exitosa del historico activo", func(t *testing.T) {
 		baseCrud := "http://comisiones_mid/"
 
@@ -647,8 +621,14 @@ func TestGetHistoricoActivoActual(t *testing.T) {
 func TestDesActivarHistorico(t *testing.T) {
 	t.Run("Caso 1: desactivacion exitosa del historico", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
+		monkey.Patch(request.GetJson, func(url string, target interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud/44"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
+			}
+
 			*(target.(*map[string]interface{})) = map[string]interface{}{
 				"Data": map[string]interface{}{
 					"Id":     float64(44),
@@ -658,7 +638,11 @@ func TestDesActivarHistorico(t *testing.T) {
 			return nil
 		})
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud/44"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
+			}
 			if method != "PUT" {
 				t.Fatalf("Se esperaba PUT y se obtuvo %s", method)
 			}
@@ -670,7 +654,7 @@ func TestDesActivarHistorico(t *testing.T) {
 			return nil
 		})
 
-		err := services.DesActivarHistorico(parameters.UrlComisionesCrud, 44)
+		err := services.DesActivarHistorico(baseCrud, 44)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -678,8 +662,14 @@ func TestDesActivarHistorico(t *testing.T) {
 
 	t.Run("Caso 2: error al actualizar el historico", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
+		monkey.Patch(request.GetJson, func(url string, target interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud/44"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
+			}
+
 			*(target.(*map[string]interface{})) = map[string]interface{}{
 				"Data": map[string]interface{}{
 					"Id":     float64(44),
@@ -689,15 +679,15 @@ func TestDesActivarHistorico(t *testing.T) {
 			return nil
 		})
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
 			return errors.New("error PUT historico")
 		})
 
-		err := services.DesActivarHistorico(parameters.UrlComisionesCrud, 44)
+		err := services.DesActivarHistorico(baseCrud, 44)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
-		if !strings.Contains(err.Error(), "error PUT histórico") && !strings.Contains(err.Error(), "error PUT hist") {
+		if !strings.Contains(err.Error(), "error PUT hist") {
 			t.Errorf("Se esperaba error de PUT y se obtuvo %v", err)
 		}
 	})
@@ -706,18 +696,28 @@ func TestDesActivarHistorico(t *testing.T) {
 func TestRevertirCambioEstado(t *testing.T) {
 	t.Run("Caso 1: rollback exitoso", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(services.EliminarObservacion, func(baseCrud string, observacionId int) error {
+		monkey.Patch(services.EliminarObservacion, func(base string, observacionId int) error {
+			if base != baseCrud {
+				t.Fatalf("Se esperaba base %s y se obtuvo %s", baseCrud, base)
+			}
 			return nil
 		})
-		monkey.Patch(services.EliminarHistorico, func(baseCrud string, historicoId int) error {
+		monkey.Patch(services.EliminarHistorico, func(base string, historicoId int) error {
+			if base != baseCrud {
+				t.Fatalf("Se esperaba base %s y se obtuvo %s", baseCrud, base)
+			}
 			return nil
 		})
 		monkey.Patch(services.ActivarHistorico, func(base string, historicoId int) error {
+			if base != baseCrud {
+				t.Fatalf("Se esperaba base %s y se obtuvo %s", baseCrud, base)
+			}
 			return nil
 		})
 
-		err := services.RevertirCambioEstado(parameters.UrlComisionesCrud, 44, 55, 66)
+		err := services.RevertirCambioEstado(baseCrud, 44, 55, 66)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -725,22 +725,23 @@ func TestRevertirCambioEstado(t *testing.T) {
 
 	t.Run("Caso 2: error eliminando historico nuevo", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(services.EliminarObservacion, func(baseCrud string, observacionId int) error {
+		monkey.Patch(services.EliminarObservacion, func(base string, observacionId int) error {
 			return nil
 		})
-		monkey.Patch(services.EliminarHistorico, func(baseCrud string, historicoId int) error {
+		monkey.Patch(services.EliminarHistorico, func(base string, historicoId int) error {
 			return errors.New("fallo eliminando historico")
 		})
 		monkey.Patch(services.ActivarHistorico, func(base string, historicoId int) error {
 			return nil
 		})
 
-		err := services.RevertirCambioEstado(parameters.UrlComisionesCrud, 44, 55, 66)
+		err := services.RevertirCambioEstado(baseCrud, 44, 55, 66)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
-		if !strings.Contains(err.Error(), "no se pudo eliminar el histórico nuevo") && !strings.Contains(err.Error(), "no se pudo eliminar el hist") {
+		if !strings.Contains(err.Error(), "no se pudo eliminar el hist") {
 			t.Errorf("Se esperaba error de rollback y se obtuvo %v", err)
 		}
 	})
@@ -749,10 +750,12 @@ func TestRevertirCambioEstado(t *testing.T) {
 func TestEliminarObservacion(t *testing.T) {
 	t.Run("Caso 1: eliminacion exitosa de observacion", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
-			if !strings.HasSuffix(rawURL, "/observacion/66") {
-				t.Fatalf("URL no esperada: %s", rawURL)
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
+			expectedURL := "http://comisiones_mid/observacion/66"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
 			}
 			if method != "DELETE" {
 				t.Fatalf("Metodo no esperado: %s", method)
@@ -761,7 +764,7 @@ func TestEliminarObservacion(t *testing.T) {
 			return nil
 		})
 
-		err := services.EliminarObservacion(parameters.UrlComisionesCrud, 66)
+		err := services.EliminarObservacion(baseCrud, 66)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -769,16 +772,17 @@ func TestEliminarObservacion(t *testing.T) {
 
 	t.Run("Caso 2: error eliminando observacion", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
 			return errors.New("fallo eliminando observacion")
 		})
 
-		err := services.EliminarObservacion(parameters.UrlComisionesCrud, 66)
+		err := services.EliminarObservacion(baseCrud, 66)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
-		if !strings.Contains(err.Error(), "error eliminando observación") && !strings.Contains(err.Error(), "error eliminando observ") {
+		if !strings.Contains(err.Error(), "error eliminando observ") {
 			t.Errorf("Se esperaba error eliminando observacion y se obtuvo %v", err)
 		}
 	})
@@ -787,10 +791,12 @@ func TestEliminarObservacion(t *testing.T) {
 func TestEliminarHistorico(t *testing.T) {
 	t.Run("Caso 1: eliminacion exitosa de historico", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
-			if !strings.HasSuffix(rawURL, "/historico_estado_solicitud/55") {
-				t.Fatalf("URL no esperada: %s", rawURL)
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud/55"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
 			}
 			if method != "DELETE" {
 				t.Fatalf("Metodo no esperado: %s", method)
@@ -799,7 +805,7 @@ func TestEliminarHistorico(t *testing.T) {
 			return nil
 		})
 
-		err := services.EliminarHistorico(parameters.UrlComisionesCrud, 55)
+		err := services.EliminarHistorico(baseCrud, 55)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -807,16 +813,17 @@ func TestEliminarHistorico(t *testing.T) {
 
 	t.Run("Caso 2: error eliminando historico", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
 			return errors.New("fallo eliminando historico")
 		})
 
-		err := services.EliminarHistorico(parameters.UrlComisionesCrud, 55)
+		err := services.EliminarHistorico(baseCrud, 55)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
-		if !strings.Contains(err.Error(), "error eliminando histórico") && !strings.Contains(err.Error(), "error eliminando hist") {
+		if !strings.Contains(err.Error(), "error eliminando hist") {
 			t.Errorf("Se esperaba error eliminando historico y se obtuvo %v", err)
 		}
 	})
@@ -825,8 +832,14 @@ func TestEliminarHistorico(t *testing.T) {
 func TestActivarHistorico(t *testing.T) {
 	t.Run("Caso 1: activacion exitosa del historico", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
+		monkey.Patch(request.GetJson, func(url string, target interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud/44"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
+			}
+
 			*(target.(*map[string]interface{})) = map[string]interface{}{
 				"Data": map[string]interface{}{
 					"Id":     float64(44),
@@ -836,7 +849,11 @@ func TestActivarHistorico(t *testing.T) {
 			return nil
 		})
 
-		monkey.Patch(request.SendJson, func(rawURL, method string, target interface{}, body interface{}) error {
+		monkey.Patch(request.SendJson, func(url, method string, target interface{}, body interface{}) error {
+			expectedURL := "http://comisiones_mid/historico_estado_solicitud/44"
+			if url != expectedURL {
+				return errors.New("URL no esperada")
+			}
 			if method != "PUT" {
 				t.Fatalf("Se esperaba PUT y se obtuvo %s", method)
 			}
@@ -848,7 +865,7 @@ func TestActivarHistorico(t *testing.T) {
 			return nil
 		})
 
-		err := services.ActivarHistorico(parameters.UrlComisionesCrud, 44)
+		err := services.ActivarHistorico(baseCrud, 44)
 		if err != nil {
 			t.Fatalf("No se esperaba error y se obtuvo %v", err)
 		}
@@ -856,16 +873,17 @@ func TestActivarHistorico(t *testing.T) {
 
 	t.Run("Caso 2: error activando historico", func(t *testing.T) {
 		defer monkey.UnpatchAll()
+		baseCrud := "http://comisiones_mid/"
 
-		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
+		monkey.Patch(request.GetJson, func(url string, target interface{}) error {
 			return errors.New("error GET historico")
 		})
 
-		err := services.ActivarHistorico(parameters.UrlComisionesCrud, 44)
+		err := services.ActivarHistorico(baseCrud, 44)
 		if err == nil {
 			t.Fatal("Se esperaba error y no se obtuvo")
 		}
-		if !strings.Contains(err.Error(), "error GET histórico") && !strings.Contains(err.Error(), "error GET hist") {
+		if !strings.Contains(err.Error(), "error GET hist") {
 			t.Errorf("Se esperaba error GET historico y se obtuvo %v", err)
 		}
 	})
