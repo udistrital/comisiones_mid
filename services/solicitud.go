@@ -181,7 +181,7 @@ func EditarSolicitud(solicitudId int, req models.EditarSolicitud) (models.Editar
 	}
 	respuesta.DetalleSolicitudId = detalleId
 
-	documentosADesactivar := documentosADesactivar(req)
+	docsADesactivar := DocumentosADesactivar(req)
 
 	if len(req.DocumentosNuevos) > 0 {
 		historicoActivoId, err := obtenerHistoricoActivo(baseCrud, solicitudId)
@@ -200,11 +200,11 @@ func EditarSolicitud(solicitudId int, req models.EditarSolicitud) (models.Editar
 		respuesta.DocumentoSolicitudIds = documentoSolicitudIds
 	}
 
-	if len(documentosADesactivar) > 0 {
-		if err := desactivarDocumentosSolicitudAsociados(baseCrud, solicitudId, documentosADesactivar); err != nil {
+	if len(docsADesactivar) > 0 {
+		if err := desactivarDocumentosSolicitudAsociados(baseCrud, solicitudId, docsADesactivar); err != nil {
 			return respuesta, err
 		}
-		respuesta.DocumentosDesactivados = documentosADesactivar
+		respuesta.DocumentosDesactivados = docsADesactivar
 	}
 
 	respuesta.Mensaje = "Solicitud actualizada correctamente"
@@ -332,7 +332,7 @@ func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
 		return 0, fmt.Errorf("no se encontró histórico activo para la solicitud %d", solicitudId)
 	}
 
-	historicoId := extraerIdRelacionado(historicoObj["Id"])
+	historicoId := ExtraerIdRelacionado(historicoObj["Id"])
 	if historicoId <= 0 {
 		return 0, fmt.Errorf("no se pudo obtener el id del histórico activo para la solicitud %d", solicitudId)
 	}
@@ -340,7 +340,7 @@ func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
 	return historicoId, nil
 }
 
-func documentosADesactivar(req models.EditarSolicitud) []int {
+func DocumentosADesactivar(req models.EditarSolicitud) []int {
 	ids := make([]int, 0)
 	seen := make(map[int]struct{})
 
@@ -373,7 +373,7 @@ func desactivarDocumentosSolicitudAsociados(baseCrud string, solicitudId int, do
 			return fmt.Errorf("respuesta inválida al consultar documento_solicitud %d", documentoSolicitudId)
 		}
 
-		historicoId := extraerIdRelacionado(obj["HistoricoEstadoSolicitudId"])
+		historicoId := ExtraerIdRelacionado(obj["HistoricoEstadoSolicitudId"])
 		if historicoId <= 0 {
 			return fmt.Errorf("no se pudo obtener el histórico asociado al documento_solicitud %d", documentoSolicitudId)
 		}
@@ -408,7 +408,7 @@ func validarHistorico(baseCrud string, historicoId int, solicitudId int) error {
 		return fmt.Errorf("respuesta inválida al consultar histórico %d", historicoId)
 	}
 
-	solicitudAsociadaId := extraerIdRelacionado(obj["SolicitudId"])
+	solicitudAsociadaId := ExtraerIdRelacionado(obj["SolicitudId"])
 	if solicitudAsociadaId != solicitudId {
 		return fmt.Errorf("el documento_solicitud asociado al histórico %d no pertenece a la solicitud %d", historicoId, solicitudId)
 	}
@@ -416,7 +416,7 @@ func validarHistorico(baseCrud string, historicoId int, solicitudId int) error {
 	return nil
 }
 
-func extraerIdRelacionado(obj interface{}) int {
+func ExtraerIdRelacionado(obj interface{}) int {
 	switch valor := obj.(type) {
 	case map[string]interface{}:
 		if id, ok := valor["Id"]; ok {
