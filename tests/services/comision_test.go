@@ -62,7 +62,7 @@ func TestConfirmarHistoricoEstadoComision(t *testing.T) {
 		monkey.Patch(request.GetJson, func(rawURL string, target interface{}) error {
 			*(target.(*map[string]interface{})) = map[string]interface{}{
 				"Data": map[string]interface{}{
-					"Id":        float64(33),
+					"Id":         float64(33),
 					"ComisionId": map[string]interface{}{"Id": float64(10)},
 				},
 			}
