@@ -459,7 +459,7 @@ func TestGetTerceroIdByNumeroIdentificacion(t *testing.T) {
 				"Data": []interface{}{
 					map[string]interface{}{
 						"TerceroId": map[string]interface{}{
-							"Id": float64(95),
+							"Id": float64(99),
 						},
 					},
 				},
