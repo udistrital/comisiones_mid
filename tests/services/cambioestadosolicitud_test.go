@@ -588,8 +588,6 @@ func TestGetHistoricoActivoActual(t *testing.T) {
 		if row["Id"] != float64(44) {
 			t.Errorf("Se esperaba Id 44, pero se obtuvo: %v", row["Id"])
 		}
-
-		t.Log("Consulta de historico activo ejecutada exitosamente")
 	})
 
 	t.Run("Caso 2: error al consultar historico activo", func(t *testing.T) {
@@ -613,8 +611,6 @@ func TestGetHistoricoActivoActual(t *testing.T) {
 		if row != nil {
 			t.Errorf("Se esperaba row nil, pero se obtuvo: %v", row)
 		}
-
-		t.Log("Test de error en consulta de historico activo ejecutado correctamente")
 	})
 }
 
