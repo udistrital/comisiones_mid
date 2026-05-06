@@ -33,7 +33,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 2. Si ya existe comisión asociada, no crear otra y continuar normal
-	comisionExistenteId := extraerComisionIdDesdeSolicitud(solicitudObj)
+	comisionExistenteId := ExtraerComisionIdDesdeSolicitud(solicitudObj)
 	if comisionExistenteId > 0 {
 		return comisionExistenteId, nil
 	}
@@ -60,13 +60,13 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 4. Obtener la fecha de creación real de la solicitud usando query
-	fechaCreacionSolicitud, err := getFechaCreacionSolicitud(baseCrud, solicitudId)
+	fechaCreacionSolicitud, err := GetFechaCreacionSolicitud(baseCrud, solicitudId)
 	if err != nil {
 		return 0, fmt.Errorf("no se pudo obtener la fecha de creación de la solicitud %d: %v", solicitudId, err)
 	}
 
 	// 5. Extraer tipo de solicitud para reenviarlo en el PUT
-	tipoSolicitudId := extraerIdRelacion(solicitudObj["TipoSolicitudId"])
+	tipoSolicitudId := ExtraerIdRelacion(solicitudObj["TipoSolicitudId"])
 	if tipoSolicitudId <= 0 {
 		return 0, fmt.Errorf("no se pudo extraer TipoSolicitudId de la solicitud %d", solicitudId)
 	}
@@ -90,7 +90,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 7. Resolver estado inicial de comisión
-	estadoComisionInicialId, err := getIdByCodigoAbreviacion(baseCrud, "estado_comision", "COM_INI")
+	estadoComisionInicialId, err := GetIdByCodigoAbreviacion(baseCrud, "estado_comision", "COM_INI")
 	if err != nil {
 		return comisionId, fmt.Errorf("la comisión fue creada y asociada, pero no se pudo resolver el estado inicial de comisión: %v", err)
 	}
@@ -121,14 +121,14 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 9. Confirmar creación del histórico de comisión
-	if err := confirmarHistoricoEstadoComision(baseCrud, historicoComisionId, comisionId); err != nil {
+	if err := ConfirmarHistoricoEstadoComision(baseCrud, historicoComisionId, comisionId); err != nil {
 		return comisionId, fmt.Errorf("la comisión fue creada y asociada, pero no se pudo confirmar la creación del histórico de comisión: %v", err)
 	}
 
 	return comisionId, nil
 }
 
-func getFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error) {
+func GetFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error) {
 	u, err := url.Parse(helpers.JoinURL(baseCrud, "/solicitud"))
 	if err != nil {
 		return "", err
@@ -178,7 +178,7 @@ func getFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error)
 	return "", fmt.Errorf("la solicitud %d no trae una FechaCreacion válida", solicitudId)
 }
 
-func extraerComisionIdDesdeSolicitud(solicitudObj map[string]interface{}) int {
+func ExtraerComisionIdDesdeSolicitud(solicitudObj map[string]interface{}) int {
 	if solicitudObj == nil {
 		return 0
 	}
@@ -202,7 +202,7 @@ func extraerComisionIdDesdeSolicitud(solicitudObj map[string]interface{}) int {
 	return 0
 }
 
-func extraerIdRelacion(v interface{}) int {
+func ExtraerIdRelacion(v interface{}) int {
 	if v == nil {
 		return 0
 	}
@@ -217,7 +217,7 @@ func extraerIdRelacion(v interface{}) int {
 	}
 }
 
-func confirmarHistoricoEstadoComision(baseCrud string, historicoComisionId int, comisionId int) error {
+func ConfirmarHistoricoEstadoComision(baseCrud string, historicoComisionId int, comisionId int) error {
 	if historicoComisionId <= 0 {
 		return fmt.Errorf("historicoComisionId es obligatorio")
 	}

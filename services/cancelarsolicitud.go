@@ -33,12 +33,12 @@ func CancelarSolicitud(solicitudId int) (models.CancelarSolicitudResponse, error
 		DocumentosSolicitudDesactivados: []int{},
 	}
 
-	if err := desactivarSolicitud(baseCrud, solicitudId); err != nil {
+	if err := DesactivarSolicitud(baseCrud, solicitudId); err != nil {
 		return models.CancelarSolicitudResponse{}, fmt.Errorf("error desactivando solicitud: %v", err)
 	}
 	resultado.SolicitudDesactivada = true
 
-	detalleIds, err := obtenerIdsPorQuery(
+	detalleIds, err := ObtenerIdsPorQuery(
 		baseCrud,
 		"detalle_solicitud",
 		fmt.Sprintf("SolicitudId:%d,Activo:true", solicitudId),
@@ -48,13 +48,13 @@ func CancelarSolicitud(solicitudId int) (models.CancelarSolicitudResponse, error
 	}
 
 	for _, id := range detalleIds {
-		if err := desactivarRecursoPorId(baseCrud, "detalle_solicitud", id); err != nil {
+		if err := DesactivarRecursoPorId(baseCrud, "detalle_solicitud", id); err != nil {
 			return models.CancelarSolicitudResponse{}, fmt.Errorf("error desactivando detalle_solicitud %d: %v", id, err)
 		}
 	}
 	resultado.DetalleSolicitudDesactivados = detalleIds
 
-	historicoIds, err := obtenerIdsPorQuery(
+	historicoIds, err := ObtenerIdsPorQuery(
 		baseCrud,
 		"historico_estado_solicitud",
 		fmt.Sprintf("SolicitudId:%d,Activo:true", solicitudId),
@@ -65,7 +65,7 @@ func CancelarSolicitud(solicitudId int) (models.CancelarSolicitudResponse, error
 
 	for _, historicoId := range historicoIds {
 		// Desactivar observaciones asociadas al histórico
-		observacionIds, err := obtenerIdsPorQuery(
+		observacionIds, err := ObtenerIdsPorQuery(
 			baseCrud,
 			"observacion",
 			fmt.Sprintf("HistoricoEstadoSolicitudId:%d,Activo:true", historicoId),
@@ -75,14 +75,14 @@ func CancelarSolicitud(solicitudId int) (models.CancelarSolicitudResponse, error
 		}
 
 		for _, obsId := range observacionIds {
-			if err := desactivarRecursoPorId(baseCrud, "observacion", obsId); err != nil {
+			if err := DesactivarRecursoPorId(baseCrud, "observacion", obsId); err != nil {
 				return models.CancelarSolicitudResponse{}, fmt.Errorf("error desactivando observación %d: %v", obsId, err)
 			}
 		}
 		resultado.ObservacionesDesactivadas = append(resultado.ObservacionesDesactivadas, observacionIds...)
 
 		// Desactivar documentos asociados al histórico
-		documentoIds, err := obtenerIdsPorQuery(
+		documentoIds, err := ObtenerIdsPorQuery(
 			baseCrud,
 			"documento_solicitud",
 			fmt.Sprintf("HistoricoEstadoSolicitudId:%d,Activo:true", historicoId),
@@ -92,13 +92,13 @@ func CancelarSolicitud(solicitudId int) (models.CancelarSolicitudResponse, error
 		}
 
 		for _, docId := range documentoIds {
-			if err := desactivarRecursoPorId(baseCrud, "documento_solicitud", docId); err != nil {
+			if err := DesactivarRecursoPorId(baseCrud, "documento_solicitud", docId); err != nil {
 				return models.CancelarSolicitudResponse{}, fmt.Errorf("error desactivando documento_solicitud %d: %v", docId, err)
 			}
 		}
 		resultado.DocumentosSolicitudDesactivados = append(resultado.DocumentosSolicitudDesactivados, documentoIds...)
 
-		if err := desactivarHistorico(baseCrud, historicoId); err != nil {
+		if err := DesActivarHistorico(baseCrud, historicoId); err != nil {
 			return models.CancelarSolicitudResponse{}, fmt.Errorf("error desactivando histórico %d: %v", historicoId, err)
 		}
 		resultado.HistoricosDesactivados = append(resultado.HistoricosDesactivados, historicoId)
@@ -107,7 +107,7 @@ func CancelarSolicitud(solicitudId int) (models.CancelarSolicitudResponse, error
 	return resultado, nil
 }
 
-func desactivarSolicitud(baseCrud string, solicitudId int) error {
+func DesactivarSolicitud(baseCrud string, solicitudId int) error {
 	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/solicitud/%d", solicitudId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
@@ -135,7 +135,7 @@ func desactivarSolicitud(baseCrud string, solicitudId int) error {
 	return nil
 }
 
-func desactivarRecursoPorId(baseCrud, recurso string, id int) error {
+func DesactivarRecursoPorId(baseCrud, recurso string, id int) error {
 	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/%s/%d", recurso, id))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
@@ -163,7 +163,7 @@ func desactivarRecursoPorId(baseCrud, recurso string, id int) error {
 	return nil
 }
 
-func obtenerIdsPorQuery(baseCrud, recurso, query string) ([]int, error) {
+func ObtenerIdsPorQuery(baseCrud, recurso, query string) ([]int, error) {
 	u, err := url.Parse(helpers.JoinURL(baseCrud, "/"+recurso))
 	if err != nil {
 		return nil, err

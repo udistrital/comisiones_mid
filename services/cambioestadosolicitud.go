@@ -41,17 +41,17 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no está configurado UrlTercerosCrud")
 	}
 
-	estadoDestinoId, err := getIdByCodigoAbreviacion(baseCrud, "estado_solicitud", req.NuevoEstado)
+	estadoDestinoId, err := GetIdByCodigoAbreviacion(baseCrud, "estado_solicitud", req.NuevoEstado)
 	if err != nil {
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDestino=%s: %v", req.NuevoEstado, err)
 	}
 
-	terceroId, err := getTerceroIdByNumeroIdentificacion(baseTerceros, req.NumeroIdentificacion)
+	terceroId, err := GetTerceroIdByNumeroIdentificacion(baseTerceros, req.NumeroIdentificacion)
 	if err != nil {
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver tercero por NumeroIdentificacion=%s: %v", req.NumeroIdentificacion, err)
 	}
 
-	histActual, err := getHistoricoActivoActual(baseCrud, solicitudId)
+	histActual, err := GetHistoricoActivoActual(baseCrud, solicitudId)
 	if err != nil {
 		return models.CambioEstadoSolicitudResponse{}, err
 	}
@@ -73,7 +73,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		}
 
 		if resp.HistoricoAnteriorId > 0 {
-			if err := desactivarHistorico(baseCrud, resp.HistoricoAnteriorId); err != nil {
+			if err := DesActivarHistorico(baseCrud, resp.HistoricoAnteriorId); err != nil {
 				return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("error desactivando histórico anterior: %v", err)
 			}
 		}
@@ -115,13 +115,13 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 
 	// Documentos múltiples opcionales asociados al nuevo histórico
 	if len(req.Documentos) > 0 {
-		documentoIds, documentoSolicitudIds, err := crearDocumentosCambioEstado(
+		documentoIds, documentoSolicitudIds, err := CrearDocumentosCambioEstado(
 			baseCrud,
 			resp.HistoricoNuevoId,
 			req.Documentos,
 		)
 		if err != nil {
-			rollbackErr := revertirCambioEstado(
+			rollbackErr := RevertirCambioEstado(
 				baseCrud,
 				resp.HistoricoAnteriorId,
 				resp.HistoricoNuevoId,
@@ -157,10 +157,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	return resp, nil
 }
 
-func crearDocumentosCambioEstado(
-	baseCrud string,
-	historicoId int,
-	documentosReq []models.DocumentoCambioEstadoRequest) ([]int, []int, error) {
+func CrearDocumentosCambioEstado(baseCrud string, historicoId int, documentosReq []models.DocumentoCambioEstadoRequest) ([]int, []int, error) {
 	if historicoId <= 0 {
 		return nil, nil, fmt.Errorf("historicoId es obligatorio")
 	}
@@ -215,7 +212,7 @@ func crearDocumentosCambioEstado(
 
 		var tipoDocumentoSolicitudId int
 		if strings.TrimSpace(documentosReq[i].TipoDocumento) != "" {
-			tipoDocumentoSolicitudId, err = getIdByCodigoAbreviacion(
+			tipoDocumentoSolicitudId, err = GetIdByCodigoAbreviacion(
 				baseCrud,
 				"tipo_documento_solicitud",
 				documentosReq[i].TipoDocumento,
@@ -227,7 +224,7 @@ func crearDocumentosCambioEstado(
 
 		var estadoDocumentoId int
 		if strings.TrimSpace(documentosReq[i].EstadoDocumento) != "" {
-			estadoDocumentoId, err = getIdByCodigoAbreviacion(
+			estadoDocumentoId, err = GetIdByCodigoAbreviacion(
 				baseCrud,
 				"estado_documento",
 				documentosReq[i].EstadoDocumento,
@@ -237,7 +234,7 @@ func crearDocumentosCambioEstado(
 			}
 		}
 
-		documentoSolicitudId, err := crearDocumentoSolicitud(
+		documentoSolicitudId, err := CrearDocumentoSolicitud(
 			baseCrud,
 			historicoId,
 			documentoId,
@@ -255,7 +252,7 @@ func crearDocumentosCambioEstado(
 	return documentoIds, documentoSolicitudIds, nil
 }
 
-func getIdByCodigoAbreviacion(base, recurso, codigo string) (int, error) {
+func GetIdByCodigoAbreviacion(base, recurso, codigo string) (int, error) {
 	u, err := url.Parse(helpers.JoinURL(base, "/"+recurso))
 	if err != nil {
 		return 0, err
@@ -286,7 +283,7 @@ func getIdByCodigoAbreviacion(base, recurso, codigo string) (int, error) {
 	return strconv.Atoi(fmt.Sprintf("%v", row["Id"]))
 }
 
-func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error) {
+func GetTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error) {
 	u, err := url.Parse(helpers.JoinURL(baseTerceros, "/datos_identificacion"))
 	if err != nil {
 		return 0, err
@@ -319,7 +316,7 @@ func getTerceroIdByNumeroIdentificacion(baseTerceros, numero string) (int, error
 	return 0, fmt.Errorf("respuesta inválida: no existe TerceroId en datos_identificacion")
 }
 
-func crearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
+func CrearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocumentoId int, estadoDocumentoId int) (int, error) {
 	postURL := helpers.JoinURL(baseCrud, "/documento_solicitud")
 	if err := helpers.ValidateAbsoluteURL(postURL); err != nil {
 		return 0, err
@@ -348,7 +345,7 @@ func crearDocumentoSolicitud(baseCrud string, historicoId int, id int, tipoDocum
 	return id, nil
 }
 
-func getHistoricoActivoActual(base string, solicitudId int) (map[string]interface{}, error) {
+func GetHistoricoActivoActual(base string, solicitudId int) (map[string]interface{}, error) {
 	u, err := url.Parse(helpers.JoinURL(base, "/historico_estado_solicitud"))
 	if err != nil {
 		return nil, err
@@ -388,7 +385,7 @@ func getHistoricoActivoActual(base string, solicitudId int) (map[string]interfac
 	return row, nil
 }
 
-func desactivarHistorico(base string, historicoId int) error {
+func DesActivarHistorico(base string, historicoId int) error {
 	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
@@ -416,28 +413,28 @@ func desactivarHistorico(base string, historicoId int) error {
 	return nil
 }
 
-func revertirCambioEstado(baseCrud string, historicoAnteriorId int, historicoNuevoId int, observacionId int) error {
+func RevertirCambioEstado(baseCrud string, historicoAnteriorId int, historicoNuevoId int, observacionId int) error {
 	if observacionId > 0 {
-		if err := eliminarObservacion(baseCrud, observacionId); err != nil {
+		if err := EliminarObservacion(baseCrud, observacionId); err != nil {
 			return fmt.Errorf("no se pudo eliminar la observación %d: %v", observacionId, err)
 		}
 	}
 
 	if historicoNuevoId > 0 {
-		if err := eliminarHistorico(baseCrud, historicoNuevoId); err != nil {
+		if err := EliminarHistorico(baseCrud, historicoNuevoId); err != nil {
 			return fmt.Errorf("no se pudo eliminar el histórico nuevo %d: %v", historicoNuevoId, err)
 		}
 	}
 
 	if historicoAnteriorId > 0 {
-		if err := activarHistorico(baseCrud, historicoAnteriorId); err != nil {
+		if err := ActivarHistorico(baseCrud, historicoAnteriorId); err != nil {
 			return fmt.Errorf("no se pudo reactivar el histórico anterior %d: %v", historicoAnteriorId, err)
 		}
 	}
 	return nil
 }
 
-func eliminarObservacion(baseCrud string, observacionId int) error {
+func EliminarObservacion(baseCrud string, observacionId int) error {
 	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/observacion/%d", observacionId))
 	if err := helpers.ValidateAbsoluteURL(deleteURL); err != nil {
 		return err
@@ -451,7 +448,7 @@ func eliminarObservacion(baseCrud string, observacionId int) error {
 	return nil
 }
 
-func eliminarHistorico(baseCrud string, historicoId int) error {
+func EliminarHistorico(baseCrud string, historicoId int) error {
 	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
 	if err := helpers.ValidateAbsoluteURL(deleteURL); err != nil {
 		return err
@@ -465,7 +462,7 @@ func eliminarHistorico(baseCrud string, historicoId int) error {
 	return nil
 }
 
-func activarHistorico(base string, historicoId int) error {
+func ActivarHistorico(base string, historicoId int) error {
 	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err

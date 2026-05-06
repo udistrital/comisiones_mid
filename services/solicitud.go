@@ -323,7 +323,7 @@ func obtenerDetalleSolicitudActivo(baseCrud string, solicitudId int) (int, map[s
 }
 
 func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
-	historicoObj, err := getHistoricoActivoActual(baseCrud, solicitudId)
+	historicoObj, err := GetHistoricoActivoActual(baseCrud, solicitudId)
 	if err != nil {
 		return 0, err
 	}
