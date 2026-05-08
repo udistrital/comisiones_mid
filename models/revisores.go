@@ -40,3 +40,16 @@ type DecanoXML struct {
 	FechaHasta     string `xml:"fecha_hasta"`
 	Facultad       string `xml:"facultad"`
 }
+
+type MaestroXML struct {
+	Apellidos      string `xml:"apellidos"`
+	CodigoFacultad int    `xml:"codigo_facultad"`
+	Proyecto       string `xml:"proyecto"`
+	CodigoProyecto int    `xml:"codigo_proyecto"`
+	Facultad       string `xml:"facultad"`
+	Nombres        string `xml:"nombres"`
+}
+
+type MaestroXMLPadre struct {
+	Datos MaestroXML `xml:"datos"`
+}

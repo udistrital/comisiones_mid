@@ -135,7 +135,7 @@ func TestCambiarEstadoSolicitud(t *testing.T) {
 			}, nil
 		})
 
-		monkey.Patch(services.CrearComision, func(baseCrud string, solicitudId int, terceroId int, rolUsuario string) (int, error) {
+		monkey.Patch(services.CrearComision, func(baseCrud string, solicitudId int, terceroId int, rolUsuario string, fechaInicio string, fechaFinal string) (int, error) {
 			return 0, nil
 		})
 
