@@ -216,8 +216,6 @@ func (c *SolicitudController) SolicitudByIdentificacion() {
 		}
 	}()
 	idStr := c.Ctx.Input.Param(":id")
-	fmt.Println("ENTRA A BUSCAR")
-	fmt.Println(idStr)
 	id, err := strconv.Atoi(idStr)
 	if err == nil {
 		if response, err := services.BuscarSolicitudIdentificacion(id); err == nil {
@@ -279,10 +277,7 @@ func (c *SolicitudController) DetallesSolicitud() {
 		}
 	}()
 
-	fmt.Println("ENTRA A BUSCAR")
-
 	idStr := c.Ctx.Input.Param(":id")
-	fmt.Println(idStr)
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -417,6 +412,8 @@ func (c *SolicitudController) PostEstados() {
 		c.CustomAbort(400, "Body inválido: "+err.Error())
 		return
 	}
+	fmt.Println("PETICIOOON")
+	fmt.Println(req)
 
 	resp, err := services.CambiarEstadoSolicitud(solicitudId, req)
 	if err != nil {
