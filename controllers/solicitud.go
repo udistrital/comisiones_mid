@@ -277,7 +277,6 @@ func (c *SolicitudController) DetallesSolicitud() {
 		}
 	}()
 
-
 	idStr := c.Ctx.Input.Param(":id")
 
 	id, err := strconv.Atoi(idStr)

@@ -17,9 +17,9 @@ type CambioEstadoSolicitudRequest struct {
 	NumeroIdentificacion string                         `json:"NumeroIdentificacion"`
 	Observacion          string                         `json:"Observacion,omitempty"`
 	Documentos           []DocumentoCambioEstadoRequest `json:"Documentos,omitempty"`
-	FechaInicio			 string							`json:"FechaInicio,omitempty"`
-	FechaFinal			 string							`json:"FechaFinal,omitempty"`
-	Facultad			 int							`json:"Facultad,omitempty"`
+	FechaInicio          string                         `json:"FechaInicio,omitempty"`
+	FechaFinal           string                         `json:"FechaFinal,omitempty"`
+	Facultad             int                            `json:"Facultad,omitempty"`
 }
 
 type CambioEstadoSolicitudResponse struct {

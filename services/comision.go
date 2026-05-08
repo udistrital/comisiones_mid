@@ -191,11 +191,11 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	payloadComision := map[string]interface{}{
-		"Descripcion": 	fmt.Sprintf("Comisión generada automáticamente desde la solicitud %d", solicitudId),
-		"Activo":      	true,
-		"FechaInicio": 	fechaInicio,
-		"FechaFinal":  	fechaFinal,
-		"Facultad": 	facultad,
+		"Descripcion": fmt.Sprintf("Comisión generada automáticamente desde la solicitud %d", solicitudId),
+		"Activo":      true,
+		"FechaInicio": fechaInicio,
+		"FechaFinal":  fechaFinal,
+		"Facultad":    facultad,
 	}
 
 	var postComisionResp map[string]interface{}
