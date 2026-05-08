@@ -146,8 +146,6 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 
 			var respDoc map[string]interface{}
 			err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud", "POST", &respDoc, &documento)
-			fmt.Println("SE CREA BIEN EN COMISIONES")
-			fmt.Println(respDoc)
 			if err != nil {
 				return respuesta, map[string]interface{}{
 					"error":   "Error vinculando documento",
@@ -458,10 +456,8 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 				if id_tercero, ok := tercero_comprobacion["Id"].(float64); ok {
 					id_tercero_busqueda := int(id_tercero)
 
-					fmt.Println("ENTRA A SERVICIO ", beego.AppConfig.String("UrlComisionesCrud")+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda)+"&limit=-1")
 					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
 						&persona); err == nil {
-						fmt.Println("ENTRA A SERVICIO 2 ", persona)
 						if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {
 							for _, item := range data {
 								var detalleSolicitud map[string]interface{}
@@ -469,7 +465,6 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 								if itemMap, ok := item.(map[string]interface{}); ok {
 									var sol models.SolicitudResumen
 									idStr := fmt.Sprintf("%v", itemMap["Id"])
-									fmt.Println("ID SOLICITUD ", idStr)
 									/*if err := request.GetJson(
 										beego.AppConfig.String("UrlComisionesCrud")+"historial_solicitud?query=SolicitudId:"+idStr,
 										&detalleSolicitud,
@@ -479,11 +474,8 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 										beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=solicitud_id:"+idStr,
 										&detalleSolicitud,
 									); err == nil {
-										fmt.Println("DETALLE SOLICITUD ", detalleSolicitud)
 										datosFormulario, err := helpers.ObtenerDatosFormulario(detalleSolicitud)
 										if err == nil {
-											fmt.Println("Programa: ", datosFormulario.Solicitante.Q7Proyecto)
-											fmt.Println("Nombre: ", datosFormulario.Solicitante.Q3NombresApellidos)
 											if id, ok := itemMap["Id"].(float64); ok {
 												sol.Id = int(id)
 											}

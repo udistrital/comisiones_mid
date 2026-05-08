@@ -146,7 +146,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 
 	// Crear comisión solo si el código abreviación es APROB_EJEC
 	if strings.EqualFold(strings.TrimSpace(req.NuevoEstado), "APROB_EJEC") {
-		comisionId, err := CrearComision(baseCrud, solicitudId, terceroId, req.RolUsuario)
+		comisionId, err := CrearComision(baseCrud, solicitudId, terceroId, req.RolUsuario, req.FechaInicio ,req.FechaFinal)
 		if err != nil {
 			logs.Error("error creando comisión para solicitud %d: %v", solicitudId, err)
 		} else if comisionId > 0 {

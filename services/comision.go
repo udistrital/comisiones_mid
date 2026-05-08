@@ -6,12 +6,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/comisiones_mid/helpers"
+	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
 
-func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario string) (int, error) {
+func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario string, fechaInicio string, fechaFinal string) (int, error) {
 	if solicitudId <= 0 {
 		return 0, fmt.Errorf("solicitudId es obligatorio")
 	}
@@ -38,6 +40,150 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 		return comisionExistenteId, nil
 	}
 
+	//Busca el maestro
+	var solicitudMaestro map[string]interface{}
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud/"+fmt.Sprintf("%d", solicitudId),
+		&solicitudMaestro,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf("error consultando la solicitud %d: %v", solicitudId, err)
+	}
+
+	// =========================
+	// OBTENER DATA
+	// =========================
+
+	data, ok := solicitudMaestro["Data"].(map[string]interface{})
+	fmt.Println("DATA SOLICITUD")
+	fmt.Println(data)
+
+	if !ok || data == nil {
+		return 0, fmt.Errorf("respuesta sin campo Data válido")
+	}
+
+	// =========================
+	// OBTENER TERCERO ID
+	// =========================
+
+	terceroRaw, exists := data["TerceroId"]
+
+	if !exists || terceroRaw == nil {
+		return 0, fmt.Errorf("no existe TerceroId en la solicitud")
+	}
+
+	terceroFloat, ok := terceroRaw.(float64)
+	if !ok {
+		return 0, fmt.Errorf("TerceroId no es numérico")
+	}
+
+	fmt.Println("TERCERO ID")
+	fmt.Println(terceroFloat)
+
+	terceroIdMaestro := int(terceroFloat)
+
+	// =========================
+	// CONSULTAR DATOS IDENTIFICACION
+	// =========================
+
+	var persona []map[string]interface{}
+
+	err = request.GetJson(
+		beego.AppConfig.String("UrlTercerosCrud")+
+			"datos_identificacion?query=TerceroId__Id:"+
+			fmt.Sprintf("%d", terceroIdMaestro),
+		&persona,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf(
+			"error consultando el tercero %d: %v",
+			terceroIdMaestro,
+			err,
+		)
+	}
+
+	if len(persona) == 0 {
+		return 0, fmt.Errorf(
+			"no se encontraron datos de identificación para el tercero %d",
+			terceroIdMaestro,
+		)
+	}
+
+	fmt.Println("PERSONA")
+	fmt.Println(persona[0])
+
+	// =========================
+	// OBTENER NUMERO DOCUMENTO
+	// =========================
+
+	// Normalmente Numero viene en la raíz del objeto
+	numeroRaw, exists := persona[0]["Numero"]
+
+	if !exists || numeroRaw == nil {
+		return 0, fmt.Errorf(
+			"el tercero %d no tiene Numero",
+			terceroIdMaestro,
+		)
+	}
+
+	var identificacionAprobador int
+
+	switch v := numeroRaw.(type) {
+
+	case float64:
+		identificacionAprobador = int(v)
+
+	case string:
+		idConvertido, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, fmt.Errorf(
+				"error convirtiendo Numero '%s' a entero: %v",
+				v,
+				err,
+			)
+		}
+
+		identificacionAprobador = idConvertido
+
+	default:
+		return 0, fmt.Errorf(
+			"tipo inválido para Numero: %T",
+			numeroRaw,
+		)
+	}
+
+	fmt.Println("CEDULAAAA")
+	fmt.Println(identificacionAprobador)
+
+	// =========================
+	// CONSULTAR FACULTAD XML
+	// =========================
+
+	var maestroXML models.MaestroXMLPadre
+
+	err = request.GetXml(
+		beego.AppConfig.String("UrlJBPM")+
+			"consulta_datos_docente_planta/"+
+			fmt.Sprintf("%d", identificacionAprobador),
+		&maestroXML,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf(
+			"error consultando maestro XML: %v",
+			err,
+		)
+	}
+
+	fmt.Println("CODIGO FACULTAD")
+	fmt.Println(maestroXML.Datos.Facultad)
+
+	facultad := maestroXML.Datos.CodigoFacultad
+
 	// 3. Crear la comisión
 	postComisionURL := helpers.JoinURL(baseCrud, "/comision")
 	if err := helpers.ValidateAbsoluteURL(postComisionURL); err != nil {
@@ -45,8 +191,11 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	payloadComision := map[string]interface{}{
-		"Descripcion": fmt.Sprintf("Comisión generada automáticamente desde la solicitud %d", solicitudId),
-		"Activo":      true,
+		"Descripcion": 	fmt.Sprintf("Comisión generada automáticamente desde la solicitud %d", solicitudId),
+		"Activo":      	true,
+		"FechaInicio": 	fechaInicio,
+		"FechaFinal":  	fechaFinal,
+		"Facultad": 	facultad,
 	}
 
 	var postComisionResp map[string]interface{}
