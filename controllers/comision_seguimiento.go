@@ -1,8 +1,12 @@
 package controllers
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
+	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/comisiones_mid/services"
 )
 
@@ -109,6 +113,135 @@ func (c *ComisionSeguimientoController) GetComisionesDocente() {
 		"Status":  "200",
 		"Message": "Consulta exitosa",
 		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// GetComentariosSeguimiento ...
+// @Title Get Comentarios Seguimiento
+// @Description Retorna los comentarios de un panel especifico de una comision.
+// @Param	comision_id		path	int		true	"Id de la comision"
+// @Param	codigo_tipo_seguimiento	path	string	true	"Codigo abreviacion del tipo de seguimiento (ej: COM_DESARROLLO)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comentarios/:comision_id/:codigo_tipo_seguimiento [get]
+func (c *ComisionSeguimientoController) GetComentariosSeguimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetComentariosSeguimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	comisionIdStr := c.GetString(":comision_id")
+	codigoTipo := c.GetString(":codigo_tipo_seguimiento")
+
+	var comisionId int
+	if _, err := fmt.Sscanf(comisionIdStr, "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if codigoTipo == "" {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "codigo_tipo_seguimiento es obligatorio",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerComentariosSeguimiento(comisionId, codigoTipo)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo comentarios",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// PostComentarioSeguimiento ...
+// @Title Post Comentario Seguimiento
+// @Description Crea un comentario en el panel indicado de una comision.
+// @Param	body	body	models.CrearComentarioRequest	true	"Datos del comentario"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comentario [post]
+func (c *ComisionSeguimientoController) PostComentarioSeguimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PostComentarioSeguimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var req models.CrearComentarioRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "Body invalido: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	id, err := services.CrearComentarioSeguimiento(req)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error creando comentario",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "201",
+		"Message": "Comentario creado exitosamente",
+		"Data":    map[string]interface{}{"id": id},
 	}
 	c.ServeJSON()
 }

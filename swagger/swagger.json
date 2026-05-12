@@ -15,6 +15,80 @@
     },
     "basePath": "/v1",
     "paths": {
+        "/seguimiento/comentario": {
+            "post": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Crea un comentario en el panel indicado de una comision.",
+                "operationId": "ComisionSeguimientoController.Post Comentario Seguimiento",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Datos del comentario",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CrearComentarioRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/seguimiento/comentarios/{comision_id}/{codigo_tipo_seguimiento}": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna los comentarios de un panel especifico de una comision.",
+                "operationId": "ComisionSeguimientoController.Get Comentarios Seguimiento",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "comision_id",
+                        "description": "Id de la comision",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    {
+                        "in": "path",
+                        "name": "codigo_tipo_seguimiento",
+                        "description": "Codigo abreviacion del tipo de seguimiento (ej: COM_DESARROLLO)",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
         "/seguimiento/comisiones_decano/{cedula}": {
             "get": {
                 "tags": [
@@ -649,6 +723,31 @@
                 "Id": {
                     "type": "integer",
                     "format": "int64"
+                }
+            }
+        },
+        "models.CrearComentarioRequest": {
+            "title": "CrearComentarioRequest",
+            "type": "object",
+            "properties": {
+                "codigo_tipo_seguimiento": {
+                    "type": "string"
+                },
+                "comision_id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "numero_identificacion": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                },
+                "texto": {
+                    "type": "string"
                 }
             }
         },
