@@ -395,6 +395,82 @@ func TestCrearDocumentosCambioEstado(t *testing.T) {
 	})
 }
 
+func TestActualizarEstadosDocumento(t *testing.T) {
+	t.Run("Caso 1: actualizacion masiva exitosa", func(t *testing.T) {
+		defer monkey.UnpatchAll()
+
+		reqs := []models.ActualizarEstadoDocumentoSolicitudRequest{
+			{
+				DocumentoSolicitudId:  101,
+				EstadoDocumentoCodigo: "APROB",
+			},
+			{
+				DocumentoSolicitudId:  102,
+				EstadoDocumentoCodigo: "NO_APROB",
+			},
+		}
+
+		monkey.Patch(services.ActualizarEstadoDocumento, func(req models.ActualizarEstadoDocumentoSolicitudRequest) (models.ActualizarEstadoDocumentoSolicitudResponse, error) {
+			return models.ActualizarEstadoDocumentoSolicitudResponse{
+				DocumentoSolicitudId:   req.DocumentoSolicitudId,
+				EstadoDocumentoNuevoId: req.DocumentoSolicitudId + 1000,
+				Mensaje:                "ok",
+			}, nil
+		})
+
+		resp, err := services.ActualizarEstadosDocumento(reqs)
+		if err != nil {
+			t.Fatalf("No se esperaba error y se obtuvo %v", err)
+		}
+		if resp.Total != 2 {
+			t.Fatalf("Se esperaba Total 2 y se obtuvo %d", resp.Total)
+		}
+		if len(resp.Resultados) != 2 {
+			t.Fatalf("Se esperaban 2 resultados y se obtuvo %d", len(resp.Resultados))
+		}
+		if resp.Resultados[0].DocumentoSolicitudId != 101 || resp.Resultados[1].DocumentoSolicitudId != 102 {
+			t.Errorf("Se obtuvieron ids inesperados: %+v", resp.Resultados)
+		}
+	})
+
+	t.Run("Caso 2: error en uno de los documentos", func(t *testing.T) {
+		defer monkey.UnpatchAll()
+
+		reqs := []models.ActualizarEstadoDocumentoSolicitudRequest{
+			{
+				DocumentoSolicitudId:  101,
+				EstadoDocumentoCodigo: "APROB",
+			},
+			{
+				DocumentoSolicitudId:  102,
+				EstadoDocumentoCodigo: "NO_APROB",
+			},
+		}
+
+		monkey.Patch(services.ActualizarEstadoDocumento, func(req models.ActualizarEstadoDocumentoSolicitudRequest) (models.ActualizarEstadoDocumentoSolicitudResponse, error) {
+			if req.DocumentoSolicitudId == 102 {
+				return models.ActualizarEstadoDocumentoSolicitudResponse{}, errors.New("fallo actualizando")
+			}
+			return models.ActualizarEstadoDocumentoSolicitudResponse{
+				DocumentoSolicitudId:   req.DocumentoSolicitudId,
+				EstadoDocumentoNuevoId: req.DocumentoSolicitudId + 1000,
+				Mensaje:                "ok",
+			}, nil
+		})
+
+		resp, err := services.ActualizarEstadosDocumento(reqs)
+		if err == nil {
+			t.Fatal("Se esperaba error y no se obtuvo")
+		}
+		if !strings.Contains(err.Error(), "DocumentoSolicitudId 102") {
+			t.Errorf("Se esperaba error con el DocumentoSolicitudId y se obtuvo %v", err)
+		}
+		if !reflect.DeepEqual(resp, models.ActualizarEstadosDocumentoSolicitudResponse{}) {
+			t.Errorf("Se esperaba respuesta vacia y se obtuvo %+v", resp)
+		}
+	})
+}
+
 func TestGetIdByCodigoAbreviacion(t *testing.T) {
 	t.Run("Caso 1: consulta exitosa del id", func(t *testing.T) {
 		defer monkey.UnpatchAll()

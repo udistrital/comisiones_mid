@@ -25,6 +25,7 @@ func (c *SolicitudController) URLMapping() {
 	c.Mapping("solicitudes_by_identificacion", c.SolicitudByIdentificacion)
 	c.Mapping("detalles_solicitud", c.DetallesSolicitud)
 	c.Mapping("ActualizarEstadoDocumento", c.ActualizarEstadoDocumento)
+	c.Mapping("ActualizarEstadosDocumento", c.ActualizarEstadosDocumento)
 	c.Mapping("Post", c.Post)
 	c.Mapping("GetOne", c.GetOne)
 	c.Mapping("GetAll", c.GetAll)
@@ -500,6 +501,36 @@ func (c *SolicitudController) ActualizarEstadoDocumento() {
 		"Success": true,
 		"Status":  200,
 		"Message": "Estado del documento actualizado correctamente",
+		"Data":    resp,
+	}
+	c.ServeJSON()
+}
+
+// ActualizarEstadosDocumento ...
+// @Title Actualizar estados documento_solicitud
+// @Description Actualiza el estado de varios documentos asociados a una solicitud
+// @Param	body	body	models.ActualizarEstadosDocumentoSolicitudRequest	true	"Payload de actualizacion masiva"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 bad request
+// @router /documento_solicitud/estados [put]
+func (c *SolicitudController) ActualizarEstadosDocumento() {
+	var req models.ActualizarEstadosDocumentoSolicitudRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.CustomAbort(400, "JSON invalido: "+err.Error())
+		return
+	}
+
+	resp, err := services.ActualizarEstadosDocumento(req.Documentos)
+	if err != nil {
+		c.CustomAbort(400, err.Error())
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  200,
+		"Message": "Estados de los documentos actualizados correctamente",
 		"Data":    resp,
 	}
 	c.ServeJSON()

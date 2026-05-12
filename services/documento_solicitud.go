@@ -165,3 +165,30 @@ func ActualizarEstadoDocumento(req models.ActualizarEstadoDocumentoSolicitudRequ
 		CrudResponse:              putResp,
 	}, nil
 }
+
+func ActualizarEstadosDocumento(reqs []models.ActualizarEstadoDocumentoSolicitudRequest) (models.ActualizarEstadosDocumentoSolicitudResponse, error) {
+	if len(reqs) == 0 {
+		return models.ActualizarEstadosDocumentoSolicitudResponse{}, fmt.Errorf("Documentos es obligatorio")
+	}
+
+	resultados := make([]models.ActualizarEstadoDocumentoSolicitudResponse, 0, len(reqs))
+
+	for i, req := range reqs {
+		resultado, err := ActualizarEstadoDocumento(req)
+		if err != nil {
+			return models.ActualizarEstadosDocumentoSolicitudResponse{}, fmt.Errorf(
+				"error actualizando el estado del documento en la posicion %d con DocumentoSolicitudId %d: %v",
+				i,
+				req.DocumentoSolicitudId,
+				err,
+			)
+		}
+		resultados = append(resultados, resultado)
+	}
+
+	return models.ActualizarEstadosDocumentoSolicitudResponse{
+		Resultados: resultados,
+		Total:      len(resultados),
+		Mensaje:    "Estados de los documentos actualizados correctamente",
+	}, nil
+}
