@@ -46,7 +46,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDestino=%s: %v", req.NuevoEstado, err)
 	}
 
-	terceroId, err := GetTerceroIdByNumeroIdentificacion(baseTerceros, req.NumeroIdentificacion)
+	terceroAprobadorId, err := GetTerceroIdByNumeroIdentificacion(baseTerceros, req.NumeroIdentificacion)
 	if err != nil {
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("no se pudo resolver tercero por NumeroIdentificacion=%s: %v", req.NumeroIdentificacion, err)
 	}
@@ -59,7 +59,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 	resp := models.CambioEstadoSolicitudResponse{
 		SolicitudId:     solicitudId,
 		EstadoDestinoId: estadoDestinoId,
-		TerceroId:       terceroId,
+		TerceroId:       terceroAprobadorId,
 		Mensaje:         "OK",
 	}
 
@@ -83,7 +83,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		"SolicitudId":       map[string]interface{}{"Id": solicitudId},
 		"EstadoSolicitudId": map[string]interface{}{"Id": estadoDestinoId},
 		"RolUsuario":        strings.TrimSpace(req.RolUsuario),
-		"TerceroId":         terceroId,
+		"TerceroId":         terceroAprobadorId,
 		"Activo":            true,
 	}
 
@@ -146,7 +146,7 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 
 	// Crear comisión solo si el código abreviación es APROB_EJEC
 	if strings.EqualFold(strings.TrimSpace(req.NuevoEstado), "APROB_EJEC") {
-		comisionId, err := CrearComision(baseCrud, solicitudId, terceroId, req.RolUsuario, req.FechaInicio, req.FechaFinal)
+		comisionId, err := CrearComision(baseCrud, solicitudId, terceroAprobadorId, req.RolUsuario, req.FechaInicio, req.FechaFinal)
 		if err != nil {
 			logs.Error("error creando comisión para solicitud %d: %v", solicitudId, err)
 		} else if comisionId > 0 {
