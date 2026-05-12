@@ -309,6 +309,37 @@
                 }
             }
         },
+        "/solicitud/documento_solicitud/estados": {
+            "put": {
+                "tags": [
+                    "solicitud"
+                ],
+                "description": "Actualiza el estado de varios documentos asociados a una solicitud",
+                "operationId": "SolicitudController.Actualizar estados documento_solicitud",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Payload de actualizacion masiva",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ActualizarEstadosDocumentoSolicitudRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request"
+                    }
+                }
+            }
+        },
         "/solicitud/estados": {
             "post": {
                 "tags": [
@@ -573,6 +604,31 @@
         "models.ActualizarEstadoDocumentoRequest": {
             "title": "ActualizarEstadoDocumentoRequest",
             "type": "object"
+        },
+        "models.ActualizarEstadoDocumentoSolicitudRequest": {
+            "title": "ActualizarEstadoDocumentoSolicitudRequest",
+            "type": "object",
+            "properties": {
+                "DocumentoSolicitudId": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "EstadoDocumentoCodigo": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ActualizarEstadosDocumentoSolicitudRequest": {
+            "title": "ActualizarEstadosDocumentoSolicitudRequest",
+            "type": "object",
+            "properties": {
+                "Documentos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ActualizarEstadoDocumentoSolicitudRequest"
+                    }
+                }
+            }
         },
         "models.Comision": {
             "title": "Comision",
