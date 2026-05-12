@@ -9,6 +9,24 @@ func init() {
 
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"],
 		beego.ControllerComments{
+			Method:           "PostComentarioSeguimiento",
+			Router:           "/comentario",
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"],
+		beego.ControllerComments{
+			Method:           "GetComentariosSeguimiento",
+			Router:           "/comentarios/:comision_id/:codigo_tipo_seguimiento",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"],
+		beego.ControllerComments{
 			Method:           "GetComisionesDecano",
 			Router:           "/comisiones_decano/:cedula",
 			AllowHTTPMethods: []string{"get"},
