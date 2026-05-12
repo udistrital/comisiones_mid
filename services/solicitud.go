@@ -740,7 +740,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	if err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
 			"observacion?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+
-			fmt.Sprintf("%d", id_solicitud)+",Activo:true",
+			fmt.Sprintf("%d", id_solicitud)+",Activo:true&limit=-1",
 		&respuesta_observaciones,
 	); err == nil {
 
