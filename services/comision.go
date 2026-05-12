@@ -13,7 +13,7 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
-func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario string, fechaInicio string, fechaFinal string) (int, error) {
+func CrearComision(baseCrud string, solicitudId int, terceroAprobadorId int, rolUsuario string, fechaInicio string, fechaFinal string) (int, error) {
 	if solicitudId <= 0 {
 		return 0, fmt.Errorf("solicitudId es obligatorio")
 	}
@@ -223,7 +223,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	// 6. Asociar comisión a la solicitud
 	payloadSolicitudUpdate := map[string]interface{}{
 		"Id":                solicitudId,
-		"TerceroId":         terceroId,
+		"TerceroId":         terceroIdMaestro,
 		"TipoSolicitudId":   map[string]interface{}{"Id": tipoSolicitudId},
 		"ComisionId":        map[string]interface{}{"Id": comisionId},
 		"ObservacionCierre": fmt.Sprintf("%v", solicitudObj["ObservacionCierre"]),
@@ -253,7 +253,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	payloadHistorico := map[string]interface{}{
 		"ComisionId":       map[string]interface{}{"Id": comisionId},
 		"EstadoComisionId": map[string]interface{}{"Id": estadoComisionInicialId},
-		"TerceroId":        terceroId,
+		"TerceroId":        terceroAprobadorId,
 		"RolUsuario":       strings.TrimSpace(rolUsuario),
 		"Descripcion":      "Histórico inicial generado automáticamente al cerrar la solicitud",
 		"Activo":           true,
