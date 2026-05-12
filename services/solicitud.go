@@ -12,6 +12,37 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+func resolverTipoSolicitudId(tipoSolicitudId int, codigo string) (int, error) {
+	if tipoSolicitudId > 0 {
+		return tipoSolicitudId, nil
+	}
+
+	if codigo == "" {
+		return 0, fmt.Errorf("debe enviar tipo_solicitud_id o cod_abreviacion_tipo_solicitud")
+	}
+
+	var resp map[string]interface{}
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"tipo_solicitud?query=CodigoAbreviacion:"+url.QueryEscape(codigo),
+		&resp,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("error consultando tipo_solicitud por código %s: %v", codigo, err)
+	}
+
+	data, ok := resp["Data"].([]interface{})
+	if !ok || len(data) == 0 {
+		return 0, fmt.Errorf("no se encontró tipo_solicitud para código %s", codigo)
+	}
+
+	id, ok := data[0].(map[string]interface{})["Id"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("respuesta inválida consultando tipo_solicitud para código %s", codigo)
+	}
+
+	return int(id), nil
+}
+
 func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.Solicitud, outputError map[string]interface{}) {
 
 	defer func() {
@@ -43,11 +74,16 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 
 	id_tercero := int(terceroMap["Id"].(float64))
 
+	tipoSolicitudId, err := resolverTipoSolicitudId(solicitud.TipoSolicitudId, solicitud.CodigoAbreviacionTipo)
+	if err != nil {
+		return respuesta, map[string]interface{}{"error": err.Error()}
+	}
+
 	req := models.SolicitudCreateRequest{
 		TerceroId: id_tercero,
 		Activo:    true,
 		TipoSolicitudId: models.IdReference{
-			Id: solicitud.TipoSolicitudId,
+			Id: tipoSolicitudId,
 		},
 		ObservacionCierre: solicitud.Observacion,
 	}
@@ -225,8 +261,13 @@ func actualizarSolicitud(baseCrud string, solicitudId int, req models.EditarSoli
 		return fmt.Errorf("respuesta inválida al consultar solicitud %d", solicitudId)
 	}
 
-	if req.TipoSolicitudId > 0 {
-		obj["TipoSolicitudId"] = map[string]interface{}{"Id": req.TipoSolicitudId}
+	tipoSolicitudId, err := resolverTipoSolicitudId(req.TipoSolicitudId, req.CodigoAbreviacionTipo)
+	if err != nil && (req.TipoSolicitudId > 0 || req.CodigoAbreviacionTipo != "") {
+		return err
+	}
+
+	if tipoSolicitudId > 0 {
+		obj["TipoSolicitudId"] = map[string]interface{}{"Id": tipoSolicitudId}
 	}
 
 	obj["ObservacionCierre"] = req.Observacion
