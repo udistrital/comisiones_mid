@@ -115,6 +115,72 @@ paths:
             $ref: '#/definitions/map[string]interface{}'
         "500":
           description: '{object} map[string]interface{}'
+  /seguimiento/documento_desarrollo:
+    post:
+      tags:
+      - seguimiento
+      description: Sube un documento al gestor documental y lo registra en documento_comision con estado CARG.
+      operationId: ComisionSeguimientoController.Post Documento Desarrollo
+      parameters:
+      - in: body
+        name: body
+        description: Datos del documento a subir
+        required: true
+        schema:
+          $ref: '#/definitions/models.SubirDocumentoDesarrolloRequest'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documento_desarrollo/{id}/desactivar:
+    put:
+      tags:
+      - seguimiento
+      description: Desactiva (soft delete) un documento_comision por su id.
+      operationId: ComisionSeguimientoController.Put Desactivar Documento Desarrollo
+      parameters:
+      - in: path
+        name: id
+        description: Id del documento_comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documentos_desarrollo/{comision_id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los tipos de documento agrupados por momento del proceso con el estado del documento subido (si existe).
+      operationId: ComisionSeguimientoController.Get Documentos Desarrollo
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
   /solicitud/:
     get:
       tags:
@@ -517,6 +583,24 @@ definitions:
         format: int64
       TipoSolicitudId:
         $ref: '#/definitions/models.TipoSolicitud'
+  models.SubirDocumentoDesarrolloRequest:
+    title: SubirDocumentoDesarrolloRequest
+    type: object
+    properties:
+      comision_id:
+        type: integer
+        format: int64
+      descripcion:
+        type: string
+      file:
+        type: string
+      id_tipo_documento:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      tipo_documento_codigo:
+        type: string
   models.TipoSolicitud:
     title: TipoSolicitud
     type: object

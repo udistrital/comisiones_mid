@@ -246,6 +246,175 @@ func (c *ComisionSeguimientoController) PostComentarioSeguimiento() {
 	c.ServeJSON()
 }
 
+// GetDocumentosDesarrollo ...
+// @Title Get Documentos Desarrollo
+// @Description Retorna los tipos de documento agrupados por momento del proceso con el estado del documento subido (si existe).
+// @Param	comision_id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documentos_desarrollo/:comision_id [get]
+func (c *ComisionSeguimientoController) GetDocumentosDesarrollo() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetDocumentosDesarrollo: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerDocumentosDesarrollo(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo documentos",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// PostDocumentoDesarrollo ...
+// @Title Post Documento Desarrollo
+// @Description Sube un documento al gestor documental y lo registra en documento_comision con estado CARG.
+// @Param	body	body	models.SubirDocumentoDesarrolloRequest	true	"Datos del documento a subir"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documento_desarrollo [post]
+func (c *ComisionSeguimientoController) PostDocumentoDesarrollo() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PostDocumentoDesarrollo: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var req models.SubirDocumentoDesarrolloRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "Body invalido: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	id, err := services.SubirDocumentoDesarrollo(req)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error subiendo documento",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "201",
+		"Message": "Documento subido exitosamente",
+		"Data":    map[string]interface{}{"id": id},
+	}
+	c.ServeJSON()
+}
+
+// PutDesactivarDocumentoDesarrollo ...
+// @Title Put Desactivar Documento Desarrollo
+// @Description Desactiva (soft delete) un documento_comision por su id.
+// @Param	id	path	int	true	"Id del documento_comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documento_desarrollo/:id/desactivar [put]
+func (c *ComisionSeguimientoController) PutDesactivarDocumentoDesarrollo() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PutDesactivarDocumentoDesarrollo: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var id int
+	if _, err := fmt.Sscanf(c.GetString(":id"), "%d", &id); err != nil || id <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if err := services.DesactivarDocumentoDesarrollo(id); err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error desactivando documento",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Documento desactivado exitosamente",
+	}
+	c.ServeJSON()
+}
+
 // GetComisionesDecano ...
 // @Title Get Comisiones Decano
 // @Description Retorna las comisiones de las facultades asignadas al decano, segun su cedula y datos del JBPM.
