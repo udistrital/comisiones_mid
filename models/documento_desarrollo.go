@@ -15,8 +15,8 @@ type DocumentoDesarrolloItem struct {
 
 // GrupoDocumentosDesarrollo agrupa documentos por momento del proceso.
 type GrupoDocumentosDesarrollo struct {
-	Momento    string                   `json:"momento"`
-	Prefijo    string                   `json:"prefijo"`
+	Momento    string                    `json:"momento"`
+	Prefijo    string                    `json:"prefijo"`
 	Documentos []DocumentoDesarrolloItem `json:"documentos"`
 }
 
