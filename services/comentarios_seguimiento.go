@@ -123,12 +123,10 @@ func ObtenerComentariosSeguimiento(comisionId int, codigoTipo string) ([]models.
 		}
 
 		resultado = append(resultado, models.ComentarioSeguimiento{
-			Id:                   int(idFloat),
-			Rol:                  desc.Rol,
-			Nombre:               desc.Nombre,
-			NumeroIdentificacion: desc.NumeroIdentificacion,
-			Texto:                desc.Texto,
-			FechaCreacion:        fechaCreacion,
+			Id:            int(idFloat),
+			Rol:           desc.Rol,
+			Texto:         desc.Texto,
+			FechaCreacion: fechaCreacion,
 		})
 	}
 
