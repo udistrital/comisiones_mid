@@ -415,6 +415,64 @@ func (c *ComisionSeguimientoController) PutDesactivarDocumentoDesarrollo() {
 	c.ServeJSON()
 }
 
+// GetDetalleComision ...
+// @Title Get Detalle Comision
+// @Description Retorna el detalle completo de una comision para el panel de gestion (fase 2).
+// @Param	id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /detalle_comision/:id [get]
+func (c *ComisionSeguimientoController) GetDetalleComision() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetDetalleComision: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerDetalleComision(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo detalle de la comision",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
 // GetComisionesDecano ...
 // @Title Get Comisiones Decano
 // @Description Retorna las comisiones de las facultades asignadas al decano, segun su cedula y datos del JBPM.
