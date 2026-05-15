@@ -26,3 +26,17 @@ type ResponseSolicitud struct {
 	Status  string    `json:"Status"`
 	Success bool      `json:"Success"`
 }
+
+type ResponseListaSolicitud struct {
+	Data    []Solicitud `json:"Data"`
+	Message string      `json:"Message"`
+	Status  string      `json:"Status"`
+	Success bool        `json:"Success"`
+}
+
+type ResponseCreateSolicitud struct {
+	Data    Solicitud `json:"Data"`
+	Message string    `json:"Message"`
+	Status  string    `json:"Status"`
+	Success bool      `json:"Success"`
+}

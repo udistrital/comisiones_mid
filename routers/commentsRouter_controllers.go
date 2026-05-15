@@ -223,4 +223,13 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"],
+		beego.ControllerComments{
+			Method:           "CrearSolicitudProrroga",
+			Router:           "/crear_solicitud_prorroga",
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 }
