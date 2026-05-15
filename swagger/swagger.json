@@ -173,6 +173,42 @@
                 }
             }
         },
+        "/seguimiento/detalle_comision/{id}": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna el detalle completo de una comision para el panel de gestion (fase 2).",
+                "operationId": "ComisionSeguimientoController.Get Detalle Comision",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "description": "Id de la comision",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "404": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
         "/seguimiento/documento_desarrollo": {
             "post": {
                 "tags": [
