@@ -28,6 +28,11 @@ func init() {
 				&controllers.ComisionSeguimientoController{},
 			),
 		),
+		beego.NSNamespace("/comision",
+			beego.NSInclude(
+				&controllers.ProrrogaController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }
