@@ -88,6 +88,15 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ComisionSeguimientoController"],
+		beego.ControllerComments{
+			Method:           "GetDocumentosPago",
+			Router:           "/documentos_pagos/:comision_id",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"],
 		beego.ControllerComments{
 			Method:           "Post",
@@ -228,6 +237,15 @@ func init() {
 			Method:           "GetSolicitudesPendientesSecretaria",
 			Router:           "/pendientes_secretaria/:numero_identificacion",
 			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"],
+		beego.ControllerComments{
+			Method:           "CrearSolicitudProrroga",
+			Router:           "/crear_solicitud_prorroga",
+			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})
