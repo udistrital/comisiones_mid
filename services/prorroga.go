@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/helpers"
@@ -12,6 +13,89 @@ import (
 func CrearSolicitudProrroga(
 	solicitudProrroga models.CrearSolicitudProrrogaEntrada,
 ) (prorroga models.CrearSolicitudProrrogaSalida, err error) {
+
+	// =========================
+	// CONSULTAR SI YA TIENE UNA PRORROGA EN CURSO Y NO RECHAZADA
+	// =========================
+
+	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
+
+	err = request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
+			fmt.Sprintf("%d", solicitudProrroga.ComisionId),
+		&responseBusquedaSolicitudProrroga,
+	)
+
+	if err != nil {
+		return models.CrearSolicitudProrrogaSalida{}, err
+	}
+
+	if !responseBusquedaSolicitudProrroga.Success {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"error consultando solicitud base: status %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudProrroga.Status != "200" {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitud base: %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	solicitudes := responseBusquedaSolicitudProrroga.Data
+	for _, idsolicitud := range solicitudes {
+		var responseHistoricoSolicitudesProrroga models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+fmt.Sprintf("%d", idsolicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistoricoSolicitudesProrroga,
+		)
+
+		if err != nil {
+			return models.CrearSolicitudProrrogaSalida{}, err
+		}
+
+		if !responseHistoricoSolicitudesProrroga.Success {
+			return models.CrearSolicitudProrrogaSalida{},
+				fmt.Errorf(
+					"error consultando los historicos de solicitud de prorroga: status %s",
+					responseHistoricoSolicitudesProrroga.Status,
+				)
+		}
+
+		if responseHistoricoSolicitudesProrroga.Status != "200" {
+			return models.CrearSolicitudProrrogaSalida{},
+				fmt.Errorf(
+					"error consultando los historicos de solicitud de prorroga: %s",
+					responseHistoricoSolicitudesProrroga.Status,
+				)
+		}
+
+		if len(responseHistoricoSolicitudesProrroga.Data) == 0 {
+			continue
+		}
+		estado := strings.TrimSpace(strings.ToLower(
+			responseHistoricoSolicitudesProrroga.Data[0].EstadoSolicitudId.Nombre,
+		))
+
+		if estado != "no aprobada" {
+			return models.CrearSolicitudProrrogaSalida{},
+				fmt.Errorf(
+					"El maestro a tiene una solicitud en estado %s", estado,
+				)
+		}
+	}
+
+	// =========================
+	// CONSULTAR SOLICITUD BASE
+	// =========================
 
 	type TipoDocumentoTemp struct {
 		Id                int
@@ -26,8 +110,6 @@ func CrearSolicitudProrroga(
 	// =========================
 	// CONSULTAR SOLICITUD BASE
 	// =========================
-
-	fmt.Println("BUSCA SOLICITUD")
 
 	var responseSolicitud models.ResponseListaSolicitud
 
@@ -72,8 +154,6 @@ func CrearSolicitudProrroga(
 	// =========================
 	// CONSULTAR TIPO SOLICITUD
 	// =========================
-
-	fmt.Println("BUSCA TIPO")
 
 	var responseTipo models.ResponseListaTipoSolicitud
 
@@ -201,8 +281,6 @@ func CrearSolicitudProrroga(
 	// CONSULTAR TIPOS DOCUMENTO
 	// =========================
 
-	fmt.Println("BUSCA TIPOS DOCUMENTO")
-
 	var responseTipoDocumentoSolicitud models.ResponseListaTipoDocumentoSolicitud
 
 	err = request.GetJson(
@@ -277,8 +355,6 @@ func CrearSolicitudProrroga(
 	// CREAR SOLICITUD
 	// =========================
 
-	fmt.Println("CREA SOLICITUD")
-
 	req := models.SolicitudCreateRequest{
 		TerceroId: solicitudComision.TerceroId,
 
@@ -333,8 +409,6 @@ func CrearSolicitudProrroga(
 	// =========================
 	// CREAR HISTORICO
 	// =========================
-
-	fmt.Println("CREA HISTORICO")
 
 	historico := models.HistoricoEstadoSolicitud{
 		SolicitudId: &models.Solicitud{

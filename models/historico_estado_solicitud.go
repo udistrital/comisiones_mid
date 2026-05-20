@@ -15,3 +15,10 @@ type ResponseCreateHistoricoEstadoSolicitud struct {
 	Status  string    `json:"Status"`
 	Success bool      `json:"Success"`
 }
+
+type ResponseListaHistoricoEstadoSolicitud struct {
+	Data    []HistoricoEstadoSolicitud `json:"Data"`
+	Message string                     `json:"Message"`
+	Status  string                     `json:"Status"`
+	Success bool                       `json:"Success"`
+}
