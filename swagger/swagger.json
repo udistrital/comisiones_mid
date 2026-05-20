@@ -15,6 +15,37 @@
     },
     "basePath": "/v1",
     "paths": {
+        "/comision/crear_solicitud_prorroga": {
+            "post": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "create Prorroga",
+                "operationId": "ProrrogaController.Create",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "body for Prorroga content",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Prorroga"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.Prorroga"
+                        }
+                    },
+                    "403": {
+                        "description": "body is empty"
+                    }
+                }
+            }
+        },
         "/seguimiento/comentario": {
             "post": {
                 "tags": [
@@ -887,6 +918,10 @@
                 }
             }
         },
+        "models.Prorroga": {
+            "title": "Prorroga",
+            "type": "object"
+        },
         "models.Solicitud": {
             "title": "Solicitud",
             "type": "object",
@@ -966,6 +1001,10 @@
         {
             "name": "seguimiento",
             "description": "ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).\nTodos los endpoints estan bajo el namespace /v1/seguimiento.\n"
+        },
+        {
+            "name": "comision",
+            "description": "ProrrogaController operations for Prorroga\n"
         }
     ]
 }

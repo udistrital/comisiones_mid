@@ -11,6 +11,26 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 basePath: /v1
 paths:
+  /comision/crear_solicitud_prorroga:
+    post:
+      tags:
+      - comision
+      description: create Prorroga
+      operationId: ProrrogaController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Prorroga content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Prorroga'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Prorroga'
+        "403":
+          description: body is empty
   /seguimiento/comentario:
     post:
       tags:
@@ -585,6 +605,9 @@ definitions:
         type: string
       texto:
         type: string
+  models.Prorroga:
+    title: Prorroga
+    type: object
   models.Solicitud:
     title: Solicitud
     type: object
@@ -641,3 +664,6 @@ tags:
   description: |
     ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).
     Todos los endpoints estan bajo el namespace /v1/seguimiento.
+- name: comision
+  description: |
+    ProrrogaController operations for Prorroga
