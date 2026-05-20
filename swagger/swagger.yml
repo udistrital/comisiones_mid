@@ -225,6 +225,28 @@ paths:
           description: '{object} map[string]interface{}'
         "500":
           description: '{object} map[string]interface{}'
+  /seguimiento/documentos_pagos/{comision_id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los documentos de soporte de pagos subidos para una comision.
+      operationId: ComisionSeguimientoController.Get Documentos Pago
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
   /solicitud/:
     get:
       tags:
