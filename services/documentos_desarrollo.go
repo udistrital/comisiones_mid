@@ -145,6 +145,7 @@ func SubirDocumentoDesarrollo(req models.SubirDocumentoDesarrolloRequest) (int, 
 			IdTipoDocumento: req.IdTipoDocumento,
 			Nombre:          req.Nombre,
 			Descripcion:     req.Descripcion,
+			Metadatos:       map[string]interface{}{},
 			File:            req.File,
 		},
 	})

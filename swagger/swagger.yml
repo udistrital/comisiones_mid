@@ -11,6 +11,26 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 basePath: /v1
 paths:
+  /comision/crear_solicitud_prorroga:
+    post:
+      tags:
+      - comision
+      description: create Prorroga
+      operationId: ProrrogaController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Prorroga content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Prorroga'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Prorroga'
+        "403":
+          description: body is empty
   /seguimiento/comentario:
     post:
       tags:
@@ -115,6 +135,30 @@ paths:
             $ref: '#/definitions/map[string]interface{}'
         "500":
           description: '{object} map[string]interface{}'
+  /seguimiento/detalle_comision/{id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna el detalle completo de una comision para el panel de gestion (fase 2).
+      operationId: ComisionSeguimientoController.Get Detalle Comision
+      parameters:
+      - in: path
+        name: id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "404":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
   /seguimiento/documento_desarrollo:
     post:
       tags:
@@ -165,6 +209,28 @@ paths:
       - seguimiento
       description: Retorna los tipos de documento agrupados por momento del proceso con el estado del documento subido (si existe).
       operationId: ComisionSeguimientoController.Get Documentos Desarrollo
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documentos_pagos/{comision_id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los documentos de soporte de pagos subidos para una comision.
+      operationId: ComisionSeguimientoController.Get Documentos Pago
       parameters:
       - in: path
         name: comision_id
@@ -561,6 +627,9 @@ definitions:
         type: string
       texto:
         type: string
+  models.Prorroga:
+    title: Prorroga
+    type: object
   models.Solicitud:
     title: Solicitud
     type: object
@@ -617,3 +686,6 @@ tags:
   description: |
     ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).
     Todos los endpoints estan bajo el namespace /v1/seguimiento.
+- name: comision
+  description: |
+    ProrrogaController operations for Prorroga

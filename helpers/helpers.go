@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/astaxie/beego"
@@ -19,39 +20,53 @@ func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resulta
 	var respuesta_creacion map[string]interface{}
 	resultado = []map[string]interface{}{}
 
-	if status, err := PostJsonTest(
-		beego.AppConfig.String("UrlGestorDocumental")+"document/upload",
-		documentos,
-		&respuesta_creacion,
-	); err == nil && (status == 200 || status == 201) {
-		if res, ok := respuesta_creacion["res"]; ok {
-			switch docs := res.(type) {
-			// varios documentos
-			case []interface{}:
-				for _, d := range docs {
-					doc := d.(map[string]interface{})
+	url := beego.AppConfig.String("UrlGestorDocumental") + "document/upload"
 
-					resultado = append(resultado, map[string]interface{}{
-						"id":          int(doc["Id"].(float64)),
-						"nombre":      doc["Nombre"].(string),
-						"descripcion": doc["Descripcion"].(string),
-						"enlace":      doc["Enlace"].(string),
-					})
-				}
-
-			// un solo documento
-			case map[string]interface{}:
-				resultado = append(resultado, map[string]interface{}{
-					"id":          int(docs["Id"].(float64)),
-					"nombre":      docs["Nombre"].(string),
-					"descripcion": docs["Descripcion"].(string),
-					"enlace":      docs["Enlace"].(string),
-				})
-			}
-		}
-
+	status, err := PostJsonTest(url, documentos, &respuesta_creacion)
+	if err != nil {
+		outputError = map[string]interface{}{"funcion": "/CrearDocumento", "err": err.Error(), "status": "500"}
 		return resultado, outputError
 	}
+
+	if status != 200 && status != 201 {
+		outputError = map[string]interface{}{
+			"funcion": "/CrearDocumento",
+			"err":     fmt.Sprintf("gestor documental respondió %d: %v", status, respuesta_creacion),
+			"status":  strconv.Itoa(status),
+		}
+		return resultado, outputError
+	}
+
+	res, ok := respuesta_creacion["res"]
+	if !ok {
+		outputError = map[string]interface{}{
+			"funcion": "/CrearDocumento",
+			"err":     fmt.Sprintf("respuesta del gestor documental sin clave 'res': %v", respuesta_creacion),
+			"status":  "500",
+		}
+		return resultado, outputError
+	}
+
+	switch docs := res.(type) {
+	case []interface{}:
+		for _, d := range docs {
+			doc := d.(map[string]interface{})
+			resultado = append(resultado, map[string]interface{}{
+				"id":          int(doc["Id"].(float64)),
+				"nombre":      doc["Nombre"].(string),
+				"descripcion": doc["Descripcion"].(string),
+				"enlace":      doc["Enlace"].(string),
+			})
+		}
+	case map[string]interface{}:
+		resultado = append(resultado, map[string]interface{}{
+			"id":          int(docs["Id"].(float64)),
+			"nombre":      docs["Nombre"].(string),
+			"descripcion": docs["Descripcion"].(string),
+			"enlace":      docs["Enlace"].(string),
+		})
+	}
+
 	return resultado, outputError
 }
 
