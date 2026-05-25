@@ -46,6 +46,62 @@
                 }
             }
         },
+        "/comision/historico_solicitudes_prorroga/{id}": {
+            "get": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "Consulta el histórico de solicitudes de prórroga",
+                "operationId": "ProrrogaController.ConsultarHistoricoSolicitudesProrroga",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseHistoricoSolicitudProrroga"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido"
+                    },
+                    "500": {
+                        "description": "error interno"
+                    }
+                }
+            }
+        },
+        "/comision/validar_solicitud_prorroga/{id}": {
+            "get": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "valida si una comisión puede crear una nueva prórroga",
+                "operationId": "ProrrogaController.Validar Solicitud Prórroga",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "description": "Id comisión",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido"
+                    },
+                    "500": {
+                        "description": "error interno"
+                    }
+                }
+            }
+        },
         "/seguimiento/comentario": {
             "post": {
                 "tags": [
@@ -1061,9 +1117,50 @@
                 }
             }
         },
+        "models.HistoricoSolicitudProrroga": {
+            "title": "HistoricoSolicitudProrroga",
+            "type": "object",
+            "properties": {
+                "estado": {
+                    "type": "string"
+                },
+                "fecha_creacion": {
+                    "type": "string"
+                },
+                "historico_id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "solicitud_id": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+        },
         "models.Prorroga": {
             "title": "Prorroga",
             "type": "object"
+        },
+        "models.ResponseHistoricoSolicitudProrroga": {
+            "title": "ResponseHistoricoSolicitudProrroga",
+            "type": "object",
+            "properties": {
+                "Data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.HistoricoSolicitudProrroga"
+                    }
+                },
+                "Message": {
+                    "type": "string"
+                },
+                "Status": {
+                    "type": "string"
+                },
+                "Success": {
+                    "type": "boolean"
+                }
+            }
         },
         "models.Solicitud": {
             "title": "Solicitud",
