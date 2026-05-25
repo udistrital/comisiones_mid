@@ -6,12 +6,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/comisiones_mid/helpers"
+	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
 
-func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario string) (int, error) {
+func CrearComision(baseCrud string, solicitudId int, terceroAprobadorId int, rolUsuario string, fechaInicio string, fechaFinal string) (int, error) {
 	if solicitudId <= 0 {
 		return 0, fmt.Errorf("solicitudId es obligatorio")
 	}
@@ -33,10 +35,154 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 2. Si ya existe comisión asociada, no crear otra y continuar normal
-	comisionExistenteId := extraerComisionIdDesdeSolicitud(solicitudObj)
+	comisionExistenteId := ExtraerComisionIdDesdeSolicitud(solicitudObj)
 	if comisionExistenteId > 0 {
 		return comisionExistenteId, nil
 	}
+
+	//Busca el maestro
+	var solicitudMaestro map[string]interface{}
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud/"+fmt.Sprintf("%d", solicitudId),
+		&solicitudMaestro,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf("error consultando la solicitud %d: %v", solicitudId, err)
+	}
+
+	// =========================
+	// OBTENER DATA
+	// =========================
+
+	data, ok := solicitudMaestro["Data"].(map[string]interface{})
+	fmt.Println("DATA SOLICITUD")
+	fmt.Println(data)
+
+	if !ok || data == nil {
+		return 0, fmt.Errorf("respuesta sin campo Data válido")
+	}
+
+	// =========================
+	// OBTENER TERCERO ID
+	// =========================
+
+	terceroRaw, exists := data["TerceroId"]
+
+	if !exists || terceroRaw == nil {
+		return 0, fmt.Errorf("no existe TerceroId en la solicitud")
+	}
+
+	terceroFloat, ok := terceroRaw.(float64)
+	if !ok {
+		return 0, fmt.Errorf("TerceroId no es numérico")
+	}
+
+	fmt.Println("TERCERO ID")
+	fmt.Println(terceroFloat)
+
+	terceroIdMaestro := int(terceroFloat)
+
+	// =========================
+	// CONSULTAR DATOS IDENTIFICACION
+	// =========================
+
+	var persona []map[string]interface{}
+
+	err = request.GetJson(
+		beego.AppConfig.String("UrlTercerosCrud")+
+			"datos_identificacion?query=TerceroId__Id:"+
+			fmt.Sprintf("%d", terceroIdMaestro),
+		&persona,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf(
+			"error consultando el tercero %d: %v",
+			terceroIdMaestro,
+			err,
+		)
+	}
+
+	if len(persona) == 0 {
+		return 0, fmt.Errorf(
+			"no se encontraron datos de identificación para el tercero %d",
+			terceroIdMaestro,
+		)
+	}
+
+	fmt.Println("PERSONA")
+	fmt.Println(persona[0])
+
+	// =========================
+	// OBTENER NUMERO DOCUMENTO
+	// =========================
+
+	// Normalmente Numero viene en la raíz del objeto
+	numeroRaw, exists := persona[0]["Numero"]
+
+	if !exists || numeroRaw == nil {
+		return 0, fmt.Errorf(
+			"el tercero %d no tiene Numero",
+			terceroIdMaestro,
+		)
+	}
+
+	var identificacionAprobador int
+
+	switch v := numeroRaw.(type) {
+
+	case float64:
+		identificacionAprobador = int(v)
+
+	case string:
+		idConvertido, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, fmt.Errorf(
+				"error convirtiendo Numero '%s' a entero: %v",
+				v,
+				err,
+			)
+		}
+
+		identificacionAprobador = idConvertido
+
+	default:
+		return 0, fmt.Errorf(
+			"tipo inválido para Numero: %T",
+			numeroRaw,
+		)
+	}
+
+	fmt.Println("CEDULAAAA")
+	fmt.Println(identificacionAprobador)
+
+	// =========================
+	// CONSULTAR FACULTAD XML
+	// =========================
+
+	var maestroXML models.MaestroXMLPadre
+
+	err = request.GetXml(
+		beego.AppConfig.String("UrlJBPM")+
+			"consulta_datos_docente_planta/"+
+			fmt.Sprintf("%d", identificacionAprobador),
+		&maestroXML,
+	)
+
+	if err != nil {
+		return 0, fmt.Errorf(
+			"error consultando maestro XML: %v",
+			err,
+		)
+	}
+
+	fmt.Println("CODIGO FACULTAD")
+	fmt.Println(maestroXML.Datos.Facultad)
+
+	facultad := maestroXML.Datos.CodigoFacultad
 
 	// 3. Crear la comisión
 	postComisionURL := helpers.JoinURL(baseCrud, "/comision")
@@ -47,6 +193,9 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	payloadComision := map[string]interface{}{
 		"Descripcion": fmt.Sprintf("Comisión generada automáticamente desde la solicitud %d", solicitudId),
 		"Activo":      true,
+		"FechaInicio": fechaInicio,
+		"FechaFinal":  fechaFinal,
+		"Facultad":    facultad,
 	}
 
 	var postComisionResp map[string]interface{}
@@ -60,13 +209,13 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 4. Obtener la fecha de creación real de la solicitud usando query
-	fechaCreacionSolicitud, err := getFechaCreacionSolicitud(baseCrud, solicitudId)
+	fechaCreacionSolicitud, err := GetFechaCreacionSolicitud(baseCrud, solicitudId)
 	if err != nil {
 		return 0, fmt.Errorf("no se pudo obtener la fecha de creación de la solicitud %d: %v", solicitudId, err)
 	}
 
 	// 5. Extraer tipo de solicitud para reenviarlo en el PUT
-	tipoSolicitudId := extraerIdRelacion(solicitudObj["TipoSolicitudId"])
+	tipoSolicitudId := ExtraerIdRelacion(solicitudObj["TipoSolicitudId"])
 	if tipoSolicitudId <= 0 {
 		return 0, fmt.Errorf("no se pudo extraer TipoSolicitudId de la solicitud %d", solicitudId)
 	}
@@ -74,7 +223,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	// 6. Asociar comisión a la solicitud
 	payloadSolicitudUpdate := map[string]interface{}{
 		"Id":                solicitudId,
-		"TerceroId":         terceroId,
+		"TerceroId":         terceroIdMaestro,
 		"TipoSolicitudId":   map[string]interface{}{"Id": tipoSolicitudId},
 		"ComisionId":        map[string]interface{}{"Id": comisionId},
 		"ObservacionCierre": fmt.Sprintf("%v", solicitudObj["ObservacionCierre"]),
@@ -90,7 +239,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 7. Resolver estado inicial de comisión
-	estadoComisionInicialId, err := getIdByCodigoAbreviacion(baseCrud, "estado_comision", "COM_INI")
+	estadoComisionInicialId, err := GetIdByCodigoAbreviacion(baseCrud, "estado_comision", "COM_INI")
 	if err != nil {
 		return comisionId, fmt.Errorf("la comisión fue creada y asociada, pero no se pudo resolver el estado inicial de comisión: %v", err)
 	}
@@ -104,7 +253,7 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	payloadHistorico := map[string]interface{}{
 		"ComisionId":       map[string]interface{}{"Id": comisionId},
 		"EstadoComisionId": map[string]interface{}{"Id": estadoComisionInicialId},
-		"TerceroId":        terceroId,
+		"TerceroId":        terceroAprobadorId,
 		"RolUsuario":       strings.TrimSpace(rolUsuario),
 		"Descripcion":      "Histórico inicial generado automáticamente al cerrar la solicitud",
 		"Activo":           true,
@@ -121,14 +270,14 @@ func CrearComision(baseCrud string, solicitudId int, terceroId int, rolUsuario s
 	}
 
 	// 9. Confirmar creación del histórico de comisión
-	if err := confirmarHistoricoEstadoComision(baseCrud, historicoComisionId, comisionId); err != nil {
+	if err := ConfirmarHistoricoEstadoComision(baseCrud, historicoComisionId, comisionId); err != nil {
 		return comisionId, fmt.Errorf("la comisión fue creada y asociada, pero no se pudo confirmar la creación del histórico de comisión: %v", err)
 	}
 
 	return comisionId, nil
 }
 
-func getFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error) {
+func GetFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error) {
 	u, err := url.Parse(helpers.JoinURL(baseCrud, "/solicitud"))
 	if err != nil {
 		return "", err
@@ -178,7 +327,7 @@ func getFechaCreacionSolicitud(baseCrud string, solicitudId int) (string, error)
 	return "", fmt.Errorf("la solicitud %d no trae una FechaCreacion válida", solicitudId)
 }
 
-func extraerComisionIdDesdeSolicitud(solicitudObj map[string]interface{}) int {
+func ExtraerComisionIdDesdeSolicitud(solicitudObj map[string]interface{}) int {
 	if solicitudObj == nil {
 		return 0
 	}
@@ -202,7 +351,7 @@ func extraerComisionIdDesdeSolicitud(solicitudObj map[string]interface{}) int {
 	return 0
 }
 
-func extraerIdRelacion(v interface{}) int {
+func ExtraerIdRelacion(v interface{}) int {
 	if v == nil {
 		return 0
 	}
@@ -217,7 +366,7 @@ func extraerIdRelacion(v interface{}) int {
 	}
 }
 
-func confirmarHistoricoEstadoComision(baseCrud string, historicoComisionId int, comisionId int) error {
+func ConfirmarHistoricoEstadoComision(baseCrud string, historicoComisionId int, comisionId int) error {
 	if historicoComisionId <= 0 {
 		return fmt.Errorf("historicoComisionId es obligatorio")
 	}

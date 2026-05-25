@@ -23,6 +23,16 @@ func init() {
 				&controllers.SolicitudPendienteDecanoController{},
 			),
 		),
+		beego.NSNamespace("/seguimiento",
+			beego.NSInclude(
+				&controllers.ComisionSeguimientoController{},
+			),
+		),
+		beego.NSNamespace("/comision",
+			beego.NSInclude(
+				&controllers.ProrrogaController{},
+			),
+		),
 	)
 	beego.AddNamespace(ns)
 }

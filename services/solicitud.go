@@ -12,6 +12,37 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+func resolverTipoSolicitudId(tipoSolicitudId int, codigo string) (int, error) {
+	if tipoSolicitudId > 0 {
+		return tipoSolicitudId, nil
+	}
+
+	if codigo == "" {
+		return 0, fmt.Errorf("debe enviar tipo_solicitud_id o cod_abreviacion_tipo_solicitud")
+	}
+
+	var resp map[string]interface{}
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"tipo_solicitud?query=CodigoAbreviacion:"+url.QueryEscape(codigo),
+		&resp,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("error consultando tipo_solicitud por código %s: %v", codigo, err)
+	}
+
+	data, ok := resp["Data"].([]interface{})
+	if !ok || len(data) == 0 {
+		return 0, fmt.Errorf("no se encontró tipo_solicitud para código %s", codigo)
+	}
+
+	id, ok := data[0].(map[string]interface{})["Id"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("respuesta inválida consultando tipo_solicitud para código %s", codigo)
+	}
+
+	return int(id), nil
+}
+
 func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.Solicitud, outputError map[string]interface{}) {
 
 	defer func() {
@@ -43,11 +74,16 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 
 	id_tercero := int(terceroMap["Id"].(float64))
 
+	tipoSolicitudId, err := resolverTipoSolicitudId(solicitud.TipoSolicitudId, solicitud.CodigoAbreviacionTipo)
+	if err != nil {
+		return respuesta, map[string]interface{}{"error": err.Error()}
+	}
+
 	req := models.SolicitudCreateRequest{
 		TerceroId: id_tercero,
 		Activo:    true,
 		TipoSolicitudId: models.IdReference{
-			Id: solicitud.TipoSolicitudId,
+			Id: tipoSolicitudId,
 		},
 		ObservacionCierre: solicitud.Observacion,
 	}
@@ -146,8 +182,6 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 
 			var respDoc map[string]interface{}
 			err = request.SendJson(beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud", "POST", &respDoc, &documento)
-			fmt.Println("SE CREA BIEN EN COMISIONES")
-			fmt.Println(respDoc)
 			if err != nil {
 				return respuesta, map[string]interface{}{
 					"error":   "Error vinculando documento",
@@ -181,7 +215,7 @@ func EditarSolicitud(solicitudId int, req models.EditarSolicitud) (models.Editar
 	}
 	respuesta.DetalleSolicitudId = detalleId
 
-	documentosADesactivar := documentosADesactivar(req)
+	docsADesactivar := DocumentosADesactivar(req)
 
 	if len(req.DocumentosNuevos) > 0 {
 		historicoActivoId, err := obtenerHistoricoActivo(baseCrud, solicitudId)
@@ -200,11 +234,11 @@ func EditarSolicitud(solicitudId int, req models.EditarSolicitud) (models.Editar
 		respuesta.DocumentoSolicitudIds = documentoSolicitudIds
 	}
 
-	if len(documentosADesactivar) > 0 {
-		if err := desactivarDocumentosSolicitudAsociados(baseCrud, solicitudId, documentosADesactivar); err != nil {
+	if len(docsADesactivar) > 0 {
+		if err := desactivarDocumentosSolicitudAsociados(baseCrud, solicitudId, docsADesactivar); err != nil {
 			return respuesta, err
 		}
-		respuesta.DocumentosDesactivados = documentosADesactivar
+		respuesta.DocumentosDesactivados = docsADesactivar
 	}
 
 	respuesta.Mensaje = "Solicitud actualizada correctamente"
@@ -227,8 +261,13 @@ func actualizarSolicitud(baseCrud string, solicitudId int, req models.EditarSoli
 		return fmt.Errorf("respuesta inválida al consultar solicitud %d", solicitudId)
 	}
 
-	if req.TipoSolicitudId > 0 {
-		obj["TipoSolicitudId"] = map[string]interface{}{"Id": req.TipoSolicitudId}
+	tipoSolicitudId, err := resolverTipoSolicitudId(req.TipoSolicitudId, req.CodigoAbreviacionTipo)
+	if err != nil && (req.TipoSolicitudId > 0 || req.CodigoAbreviacionTipo != "") {
+		return err
+	}
+
+	if tipoSolicitudId > 0 {
+		obj["TipoSolicitudId"] = map[string]interface{}{"Id": tipoSolicitudId}
 	}
 
 	obj["ObservacionCierre"] = req.Observacion
@@ -323,7 +362,7 @@ func obtenerDetalleSolicitudActivo(baseCrud string, solicitudId int) (int, map[s
 }
 
 func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
-	historicoObj, err := getHistoricoActivoActual(baseCrud, solicitudId)
+	historicoObj, err := GetHistoricoActivoActual(baseCrud, solicitudId)
 	if err != nil {
 		return 0, err
 	}
@@ -332,7 +371,7 @@ func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
 		return 0, fmt.Errorf("no se encontró histórico activo para la solicitud %d", solicitudId)
 	}
 
-	historicoId := extraerIdRelacionado(historicoObj["Id"])
+	historicoId := ExtraerIdRelacionado(historicoObj["Id"])
 	if historicoId <= 0 {
 		return 0, fmt.Errorf("no se pudo obtener el id del histórico activo para la solicitud %d", solicitudId)
 	}
@@ -340,7 +379,7 @@ func obtenerHistoricoActivo(baseCrud string, solicitudId int) (int, error) {
 	return historicoId, nil
 }
 
-func documentosADesactivar(req models.EditarSolicitud) []int {
+func DocumentosADesactivar(req models.EditarSolicitud) []int {
 	ids := make([]int, 0)
 	seen := make(map[int]struct{})
 
@@ -373,7 +412,7 @@ func desactivarDocumentosSolicitudAsociados(baseCrud string, solicitudId int, do
 			return fmt.Errorf("respuesta inválida al consultar documento_solicitud %d", documentoSolicitudId)
 		}
 
-		historicoId := extraerIdRelacionado(obj["HistoricoEstadoSolicitudId"])
+		historicoId := ExtraerIdRelacionado(obj["HistoricoEstadoSolicitudId"])
 		if historicoId <= 0 {
 			return fmt.Errorf("no se pudo obtener el histórico asociado al documento_solicitud %d", documentoSolicitudId)
 		}
@@ -408,7 +447,7 @@ func validarHistorico(baseCrud string, historicoId int, solicitudId int) error {
 		return fmt.Errorf("respuesta inválida al consultar histórico %d", historicoId)
 	}
 
-	solicitudAsociadaId := extraerIdRelacionado(obj["SolicitudId"])
+	solicitudAsociadaId := ExtraerIdRelacionado(obj["SolicitudId"])
 	if solicitudAsociadaId != solicitudId {
 		return fmt.Errorf("el documento_solicitud asociado al histórico %d no pertenece a la solicitud %d", historicoId, solicitudId)
 	}
@@ -416,7 +455,7 @@ func validarHistorico(baseCrud string, historicoId int, solicitudId int) error {
 	return nil
 }
 
-func extraerIdRelacionado(obj interface{}) int {
+func ExtraerIdRelacionado(obj interface{}) int {
 	switch valor := obj.(type) {
 	case map[string]interface{}:
 		if id, ok := valor["Id"]; ok {
@@ -458,10 +497,8 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 				if id_tercero, ok := tercero_comprobacion["Id"].(float64); ok {
 					id_tercero_busqueda := int(id_tercero)
 
-					fmt.Println("ENTRA A SERVICIO ", beego.AppConfig.String("UrlComisionesCrud")+"solicitud?query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda)+"&limit=-1")
-					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
+					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
 						&persona); err == nil {
-						fmt.Println("ENTRA A SERVICIO 2 ", persona)
 						if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {
 							for _, item := range data {
 								var detalleSolicitud map[string]interface{}
@@ -469,7 +506,6 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 								if itemMap, ok := item.(map[string]interface{}); ok {
 									var sol models.SolicitudResumen
 									idStr := fmt.Sprintf("%v", itemMap["Id"])
-									fmt.Println("ID SOLICITUD ", idStr)
 									/*if err := request.GetJson(
 										beego.AppConfig.String("UrlComisionesCrud")+"historial_solicitud?query=SolicitudId:"+idStr,
 										&detalleSolicitud,
@@ -479,11 +515,8 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 										beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=solicitud_id:"+idStr,
 										&detalleSolicitud,
 									); err == nil {
-										fmt.Println("DETALLE SOLICITUD ", detalleSolicitud)
 										datosFormulario, err := helpers.ObtenerDatosFormulario(detalleSolicitud)
 										if err == nil {
-											fmt.Println("Programa: ", datosFormulario.Solicitante.Q7Proyecto)
-											fmt.Println("Nombre: ", datosFormulario.Solicitante.Q3NombresApellidos)
 											if id, ok := itemMap["Id"].(float64); ok {
 												sol.Id = int(id)
 											}
@@ -631,7 +664,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	var respuesta_documentos map[string]interface{}
 
 	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true",
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true&limit=-1",
 		&respuesta_documentos,
 	); err == nil {
 
@@ -707,7 +740,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 	if err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
 			"observacion?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+
-			fmt.Sprintf("%d", id_solicitud)+",Activo:true",
+			fmt.Sprintf("%d", id_solicitud)+",Activo:true&limit=-1",
 		&respuesta_observaciones,
 	); err == nil {
 

@@ -11,6 +11,336 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 basePath: /v1
 paths:
+  /comision/crear_solicitud_prorroga:
+    post:
+      tags:
+      - comision
+      description: create Prorroga
+      operationId: ProrrogaController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Prorroga content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Prorroga'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Prorroga'
+        "403":
+          description: body is empty
+  /comision/historico_solicitudes_prorroga/{id}:
+    get:
+      tags:
+      - comision
+      description: Consulta el histórico de solicitudes de prórroga
+      operationId: ProrrogaController.ConsultarHistoricoSolicitudesProrroga
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.ResponseHistoricoSolicitudProrroga'
+        "400":
+          description: id inválido
+        "500":
+          description: error interno
+  /comision/validar_solicitud_prorroga/{id}:
+    get:
+      tags:
+      - comision
+      description: valida si una comisión puede crear una nueva prórroga
+      operationId: ProrrogaController.Validar Solicitud Prórroga
+      parameters:
+      - in: path
+        name: id
+        description: Id comisión
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: id inválido
+        "500":
+          description: error interno
+  /seguimiento/comentario:
+    post:
+      tags:
+      - seguimiento
+      description: Crea un comentario en el panel indicado de una comision.
+      operationId: ComisionSeguimientoController.Post Comentario Seguimiento
+      parameters:
+      - in: body
+        name: body
+        description: Datos del comentario
+        required: true
+        schema:
+          $ref: '#/definitions/models.CrearComentarioRequest'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/comentarios/{comision_id}/{codigo_tipo_seguimiento}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los comentarios de un panel especifico de una comision.
+      operationId: ComisionSeguimientoController.Get Comentarios Seguimiento
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      - in: path
+        name: codigo_tipo_seguimiento
+        description: 'Codigo abreviacion del tipo de seguimiento (ej: COM_DESARROLLO)'
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/comisiones_decano/{cedula}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna las comisiones de las facultades asignadas al decano, segun su cedula y datos del JBPM.
+      operationId: ComisionSeguimientoController.Get Comisiones Decano
+      parameters:
+      - in: path
+        name: cedula
+        description: Numero de cedula del decano
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/comisiones_docente/{cedula}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna las comisiones activas del docente identificado por su numero de cedula.
+      operationId: ComisionSeguimientoController.Get Comisiones Docente
+      parameters:
+      - in: path
+        name: cedula
+        description: Numero de cedula del docente
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/comisiones_secretaria_general:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna todas las comisiones activas con su estado actual. Usado por secretaria general/academica.
+      operationId: ComisionSeguimientoController.Get Comisiones Secretaria General
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/detalle_comision/{id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna el detalle completo de una comision para el panel de gestion (fase 2).
+      operationId: ComisionSeguimientoController.Get Detalle Comision
+      parameters:
+      - in: path
+        name: id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "404":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documento_desarrollo:
+    post:
+      tags:
+      - seguimiento
+      description: Sube un documento al gestor documental y lo registra en documento_comision con estado CARG.
+      operationId: ComisionSeguimientoController.Post Documento Desarrollo
+      parameters:
+      - in: body
+        name: body
+        description: Datos del documento a subir
+        required: true
+        schema:
+          $ref: '#/definitions/models.SubirDocumentoDesarrolloRequest'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documento_desarrollo/{id}/desactivar:
+    put:
+      tags:
+      - seguimiento
+      description: Desactiva (soft delete) un documento_comision por su id.
+      operationId: ComisionSeguimientoController.Put Desactivar Documento Desarrollo
+      parameters:
+      - in: path
+        name: id
+        description: Id del documento_comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documentos_desarrollo/{comision_id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los tipos de documento agrupados por momento del proceso con el estado del documento subido (si existe).
+      operationId: ComisionSeguimientoController.Get Documentos Desarrollo
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/documentos_pagos/{comision_id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los documentos de soporte de pagos subidos para una comision.
+      operationId: ComisionSeguimientoController.Get Documentos Pago
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/estados_cumplimiento:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna los estados de comision cuyo codigo empieza por CUMP_ o INCUMP_. Usados para el dropdown del panel de cumplimiento.
+      operationId: ComisionSeguimientoController.Get Estados Cumplimiento
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/historial_cumplimiento/{comision_id}:
+    get:
+      tags:
+      - seguimiento
+      description: Retorna el historial de registros de cumplimiento de una comision, ordenados mas reciente primero.
+      operationId: ComisionSeguimientoController.Get Historial Cumplimiento
+      parameters:
+      - in: path
+        name: comision_id
+        description: Id de la comision
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
+  /seguimiento/registro_cumplimiento:
+    post:
+      tags:
+      - seguimiento
+      description: Crea un nuevo registro de cumplimiento para una comision. Desactiva el historico previo y crea uno nuevo con el estado seleccionado.
+      operationId: ComisionSeguimientoController.Post Registro Cumplimiento
+      parameters:
+      - in: body
+        name: body
+        description: Datos del registro
+        required: true
+        schema:
+          $ref: '#/definitions/models.CrearRegistroCumplimientoRequest'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: '{object} map[string]interface{}'
+        "500":
+          description: '{object} map[string]interface{}'
   /solicitud/:
     get:
       tags:
@@ -187,6 +517,46 @@ paths:
             $ref: '#/definitions/models.Solicitud'
         "403":
           description: body is empty
+  /solicitud/documento_solicitud/estado:
+    put:
+      tags:
+      - solicitud
+      description: Actualiza el estado de un documento asociado a una solicitud
+      operationId: SolicitudController.Actualizar estado documento_solicitud
+      parameters:
+      - in: body
+        name: body
+        description: Payload de actualizacion
+        required: true
+        schema:
+          $ref: '#/definitions/models.ActualizarEstadoDocumentoRequest'
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: bad request
+  /solicitud/documento_solicitud/estados:
+    put:
+      tags:
+      - solicitud
+      description: Actualiza el estado de varios documentos asociados a una solicitud
+      operationId: SolicitudController.Actualizar estados documento_solicitud
+      parameters:
+      - in: body
+        name: body
+        description: Payload de actualizacion masiva
+        required: true
+        schema:
+          $ref: '#/definitions/models.ActualizarEstadosDocumentoSolicitudRequest'
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
+        "400":
+          description: bad request
   /solicitud/estados:
     post:
       tags:
@@ -299,6 +669,26 @@ definitions:
   map[string]interface{}:
     title: map[string]interface{}
     type: object
+  models.ActualizarEstadoDocumentoRequest:
+    title: ActualizarEstadoDocumentoRequest
+    type: object
+  models.ActualizarEstadoDocumentoSolicitudRequest:
+    title: ActualizarEstadoDocumentoSolicitudRequest
+    type: object
+    properties:
+      DocumentoSolicitudId:
+        type: integer
+        format: int64
+      EstadoDocumentoCodigo:
+        type: string
+  models.ActualizarEstadosDocumentoSolicitudRequest:
+    title: ActualizarEstadosDocumentoSolicitudRequest
+    type: object
+    properties:
+      Documentos:
+        type: array
+        items:
+          $ref: '#/definitions/models.ActualizarEstadoDocumentoSolicitudRequest'
   models.Comision:
     title: Comision
     type: object
@@ -314,6 +704,70 @@ definitions:
       Id:
         type: integer
         format: int64
+  models.CrearComentarioRequest:
+    title: CrearComentarioRequest
+    type: object
+    properties:
+      codigo_tipo_seguimiento:
+        type: string
+      comision_id:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      numero_identificacion:
+        type: string
+      rol:
+        type: string
+      texto:
+        type: string
+  models.CrearRegistroCumplimientoRequest:
+    title: CrearRegistroCumplimientoRequest
+    type: object
+    properties:
+      comision_id:
+        type: integer
+        format: int64
+      descripcion:
+        type: string
+      estado_id:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      rol:
+        type: string
+  models.HistoricoSolicitudProrroga:
+    title: HistoricoSolicitudProrroga
+    type: object
+    properties:
+      estado:
+        type: string
+      fecha_creacion:
+        type: string
+      historico_id:
+        type: integer
+        format: int64
+      solicitud_id:
+        type: integer
+        format: int64
+  models.Prorroga:
+    title: Prorroga
+    type: object
+  models.ResponseHistoricoSolicitudProrroga:
+    title: ResponseHistoricoSolicitudProrroga
+    type: object
+    properties:
+      Data:
+        type: array
+        items:
+          $ref: '#/definitions/models.HistoricoSolicitudProrroga'
+      Message:
+        type: string
+      Status:
+        type: string
+      Success:
+        type: boolean
   models.Solicitud:
     title: Solicitud
     type: object
@@ -336,6 +790,24 @@ definitions:
         format: int64
       TipoSolicitudId:
         $ref: '#/definitions/models.TipoSolicitud'
+  models.SubirDocumentoDesarrolloRequest:
+    title: SubirDocumentoDesarrolloRequest
+    type: object
+    properties:
+      comision_id:
+        type: integer
+        format: int64
+      descripcion:
+        type: string
+      file:
+        type: string
+      id_tipo_documento:
+        type: integer
+        format: int64
+      nombre:
+        type: string
+      tipo_documento_codigo:
+        type: string
   models.TipoSolicitud:
     title: TipoSolicitud
     type: object
@@ -347,3 +819,11 @@ definitions:
         format: int64
       Nombre:
         type: string
+tags:
+- name: seguimiento
+  description: |
+    ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).
+    Todos los endpoints estan bajo el namespace /v1/seguimiento.
+- name: comision
+  description: |
+    ProrrogaController operations for Prorroga

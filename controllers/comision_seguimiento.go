@@ -1,0 +1,718 @@
+package controllers
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
+	"github.com/udistrital/comisiones_mid/models"
+	"github.com/udistrital/comisiones_mid/services"
+)
+
+// ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).
+// Todos los endpoints estan bajo el namespace /v1/seguimiento.
+type ComisionSeguimientoController struct {
+	beego.Controller
+}
+
+// GetComisionesSecretariaGeneral ...
+// @Title Get Comisiones Secretaria General
+// @Description Retorna todas las comisiones activas con su estado actual. Usado por secretaria general/academica.
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comisiones_secretaria_general [get]
+func (c *ComisionSeguimientoController) GetComisionesSecretariaGeneral() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetComisionesSecretariaGeneral: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	data, err := services.ObtenerBandejaSecretariaGeneral()
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo comisiones",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// GetComisionesDocente ...
+// @Title Get Comisiones Docente
+// @Description Retorna las comisiones activas del docente identificado por su numero de cedula.
+// @Param	cedula	path	string	true	"Numero de cedula del docente"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comisiones_docente/:cedula [get]
+func (c *ComisionSeguimientoController) GetComisionesDocente() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetComisionesDocente: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	cedula := c.GetString(":cedula")
+
+	if cedula == "" {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "cedula es obligatoria",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerBandejaDocente(cedula)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo comisiones del docente",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// GetComentariosSeguimiento ...
+// @Title Get Comentarios Seguimiento
+// @Description Retorna los comentarios de un panel especifico de una comision.
+// @Param	comision_id		path	int		true	"Id de la comision"
+// @Param	codigo_tipo_seguimiento	path	string	true	"Codigo abreviacion del tipo de seguimiento (ej: COM_DESARROLLO)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comentarios/:comision_id/:codigo_tipo_seguimiento [get]
+func (c *ComisionSeguimientoController) GetComentariosSeguimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetComentariosSeguimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	comisionIdStr := c.GetString(":comision_id")
+	codigoTipo := c.GetString(":codigo_tipo_seguimiento")
+
+	var comisionId int
+	if _, err := fmt.Sscanf(comisionIdStr, "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if codigoTipo == "" {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "codigo_tipo_seguimiento es obligatorio",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerComentariosSeguimiento(comisionId, codigoTipo)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo comentarios",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// PostComentarioSeguimiento ...
+// @Title Post Comentario Seguimiento
+// @Description Crea un comentario en el panel indicado de una comision.
+// @Param	body	body	models.CrearComentarioRequest	true	"Datos del comentario"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comentario [post]
+func (c *ComisionSeguimientoController) PostComentarioSeguimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PostComentarioSeguimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var req models.CrearComentarioRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "Body invalido: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	id, err := services.CrearComentarioSeguimiento(req)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error creando comentario",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "201",
+		"Message": "Comentario creado exitosamente",
+		"Data":    map[string]interface{}{"id": id},
+	}
+	c.ServeJSON()
+}
+
+// GetDocumentosDesarrollo ...
+// @Title Get Documentos Desarrollo
+// @Description Retorna los tipos de documento agrupados por momento del proceso con el estado del documento subido (si existe).
+// @Param	comision_id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documentos_desarrollo/:comision_id [get]
+func (c *ComisionSeguimientoController) GetDocumentosDesarrollo() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetDocumentosDesarrollo: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerDocumentosDesarrollo(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo documentos",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// PostDocumentoDesarrollo ...
+// @Title Post Documento Desarrollo
+// @Description Sube un documento al gestor documental y lo registra en documento_comision con estado CARG.
+// @Param	body	body	models.SubirDocumentoDesarrolloRequest	true	"Datos del documento a subir"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documento_desarrollo [post]
+func (c *ComisionSeguimientoController) PostDocumentoDesarrollo() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PostDocumentoDesarrollo: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var req models.SubirDocumentoDesarrolloRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "Body invalido: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	id, err := services.SubirDocumentoDesarrollo(req)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error subiendo documento",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "201",
+		"Message": "Documento subido exitosamente",
+		"Data":    map[string]interface{}{"id": id},
+	}
+	c.ServeJSON()
+}
+
+// PutDesactivarDocumentoDesarrollo ...
+// @Title Put Desactivar Documento Desarrollo
+// @Description Desactiva (soft delete) un documento_comision por su id.
+// @Param	id	path	int	true	"Id del documento_comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documento_desarrollo/:id/desactivar [put]
+func (c *ComisionSeguimientoController) PutDesactivarDocumentoDesarrollo() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PutDesactivarDocumentoDesarrollo: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var id int
+	if _, err := fmt.Sscanf(c.GetString(":id"), "%d", &id); err != nil || id <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if err := services.DesactivarDocumentoDesarrollo(id); err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error desactivando documento",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Documento desactivado exitosamente",
+	}
+	c.ServeJSON()
+}
+
+// GetDetalleComision ...
+// @Title Get Detalle Comision
+// @Description Retorna el detalle completo de una comision para el panel de gestion (fase 2).
+// @Param	id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /detalle_comision/:id [get]
+func (c *ComisionSeguimientoController) GetDetalleComision() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetDetalleComision: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerDetalleComision(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo detalle de la comision",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// GetDocumentosPago ...
+// @Title Get Documentos Pago
+// @Description Retorna los documentos de soporte de pagos subidos para una comision.
+// @Param	comision_id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /documentos_pagos/:comision_id [get]
+func (c *ComisionSeguimientoController) GetDocumentosPago() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetDocumentosPago: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerDocumentosPago(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo documentos de pagos",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}
+
+// GetEstadosCumplimiento ...
+// @Title Get Estados Cumplimiento
+// @Description Retorna los estados de comision cuyo codigo empieza por CUMP_ o INCUMP_. Usados para el dropdown del panel de cumplimiento.
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /estados_cumplimiento [get]
+func (c *ComisionSeguimientoController) GetEstadosCumplimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetEstadosCumplimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	data, err := services.ObtenerEstadosCumplimiento()
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "500", "Message": "Error obteniendo estados de cumplimiento", "Error": err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true, "Status": "200", "Message": "Consulta exitosa", "Data": data,
+	}
+	c.ServeJSON()
+}
+
+// GetHistorialCumplimiento ...
+// @Title Get Historial Cumplimiento
+// @Description Retorna el historial de registros de cumplimiento de una comision, ordenados mas reciente primero.
+// @Param	comision_id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /historial_cumplimiento/:comision_id [get]
+func (c *ComisionSeguimientoController) GetHistorialCumplimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetHistorialCumplimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "400", "Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerHistorialCumplimiento(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "500", "Message": "Error obteniendo historial de cumplimiento", "Error": err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true, "Status": "200", "Message": "Consulta exitosa", "Data": data,
+	}
+	c.ServeJSON()
+}
+
+// PostRegistroCumplimiento ...
+// @Title Post Registro Cumplimiento
+// @Description Crea un nuevo registro de cumplimiento para una comision. Desactiva el historico previo y crea uno nuevo con el estado seleccionado.
+// @Param	body	body	models.CrearRegistroCumplimientoRequest	true	"Datos del registro"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /registro_cumplimiento [post]
+func (c *ComisionSeguimientoController) PostRegistroCumplimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PostRegistroCumplimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var req models.CrearRegistroCumplimientoRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "400", "Message": "Body invalido: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	id, err := services.CrearRegistroCumplimiento(req)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "500", "Message": "Error creando registro de cumplimiento", "Error": err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true, "Status": "201", "Message": "Registro creado exitosamente", "Data": map[string]interface{}{"id": id},
+	}
+	c.ServeJSON()
+}
+
+// GetComisionesDecano ...
+// @Title Get Comisiones Decano
+// @Description Retorna las comisiones de las facultades asignadas al decano, segun su cedula y datos del JBPM.
+// @Param	cedula	path	string	true	"Numero de cedula del decano"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /comisiones_decano/:cedula [get]
+func (c *ComisionSeguimientoController) GetComisionesDecano() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetComisionesDecano: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false,
+				"Status":  "500",
+				"Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	cedula := c.GetString(":cedula")
+
+	if cedula == "" {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "400",
+			"Message": "cedula es obligatoria",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerBandejaDecano(cedula)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error obteniendo comisiones del decano",
+			"Error":   err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+	c.ServeJSON()
+}

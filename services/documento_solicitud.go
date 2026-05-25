@@ -5,8 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
+	"github.com/udistrital/utils_oas/request"
 )
 
 func CrearDocumentosSolicitud(
@@ -68,7 +71,7 @@ func CrearDocumentosSolicitud(
 
 		var tipoDocumentoSolicitudId int
 		if strings.TrimSpace(documentosReq[i].TipoDocumento) != "" {
-			tipoDocumentoSolicitudId, err = getIdByCodigoAbreviacion(
+			tipoDocumentoSolicitudId, err = GetIdByCodigoAbreviacion(
 				baseCrud,
 				"tipo_documento_solicitud",
 				documentosReq[i].TipoDocumento,
@@ -80,7 +83,7 @@ func CrearDocumentosSolicitud(
 
 		var estadoDocumentoId int
 		if strings.TrimSpace(documentosReq[i].EstadoDocumento) != "" {
-			estadoDocumentoId, err = getIdByCodigoAbreviacion(
+			estadoDocumentoId, err = GetIdByCodigoAbreviacion(
 				baseCrud,
 				"estado_documento",
 				documentosReq[i].EstadoDocumento,
@@ -90,7 +93,7 @@ func CrearDocumentosSolicitud(
 			}
 		}
 
-		documentoSolicitudId, err := crearDocumentoSolicitud(
+		documentoSolicitudId, err := CrearDocumentoSolicitud(
 			baseCrud,
 			historicoNuevoId,
 			documentoId,
@@ -106,4 +109,86 @@ func CrearDocumentosSolicitud(
 	}
 
 	return documentoIds, documentoSolicitudIds, nil
+}
+
+func ActualizarEstadoDocumento(req models.ActualizarEstadoDocumentoSolicitudRequest) (models.ActualizarEstadoDocumentoSolicitudResponse, error) {
+
+	if req.DocumentoSolicitudId <= 0 {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("DocumentoSolicitudId es obligatorio")
+	}
+
+	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
+	logs.Info("UrlComisionesCrud=%q", baseCrud)
+	if baseCrud == "" {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
+	}
+
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/documento_solicitud/%d", req.DocumentoSolicitudId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, err
+	}
+
+	var getResp map[string]interface{}
+	if err := request.GetJson(getURL, &getResp); err != nil {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("error consultando documento_solicitud: %v", err)
+	}
+
+	obj := helpers.UnwrapDataToMap(getResp)
+	if obj == nil {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("respuesta invalida al consultar documento_solicitud %d", req.DocumentoSolicitudId)
+	}
+
+	estadoNuevoId, err := GetIdByCodigoAbreviacion(baseCrud, "estado_documento", req.EstadoDocumentoCodigo)
+	if err != nil {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("no se pudo resolver EstadoDocumentoCodigo=%s: %v", req.EstadoDocumentoCodigo, err)
+	}
+
+	estadoAnteriorId := 0
+	if estadoObj, ok := obj["EstadoDocumentoId"].(map[string]interface{}); ok {
+		estadoAnteriorId, _ = strconv.Atoi(fmt.Sprintf("%v", estadoObj["Id"]))
+	} else if obj["EstadoDocumentoId"] != nil {
+		estadoAnteriorId, _ = strconv.Atoi(fmt.Sprintf("%v", obj["EstadoDocumentoId"]))
+	}
+
+	obj["EstadoDocumentoId"] = map[string]interface{}{"Id": estadoNuevoId}
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(getURL, "PUT", &putResp, obj); err != nil {
+		return models.ActualizarEstadoDocumentoSolicitudResponse{}, fmt.Errorf("error actualizando estado del documento_solicitud %d: %v", req.DocumentoSolicitudId, err)
+	}
+
+	return models.ActualizarEstadoDocumentoSolicitudResponse{
+		DocumentoSolicitudId:      req.DocumentoSolicitudId,
+		EstadoDocumentoAnteriorId: estadoAnteriorId,
+		EstadoDocumentoNuevoId:    estadoNuevoId,
+		Mensaje:                   "Estado del documento actualizado correctamente",
+		CrudResponse:              putResp,
+	}, nil
+}
+
+func ActualizarEstadosDocumento(reqs []models.ActualizarEstadoDocumentoSolicitudRequest) (models.ActualizarEstadosDocumentoSolicitudResponse, error) {
+	if len(reqs) == 0 {
+		return models.ActualizarEstadosDocumentoSolicitudResponse{}, fmt.Errorf("Documentos es obligatorio")
+	}
+
+	resultados := make([]models.ActualizarEstadoDocumentoSolicitudResponse, 0, len(reqs))
+
+	for i, req := range reqs {
+		resultado, err := ActualizarEstadoDocumento(req)
+		if err != nil {
+			return models.ActualizarEstadosDocumentoSolicitudResponse{}, fmt.Errorf(
+				"error actualizando el estado del documento en la posicion %d con DocumentoSolicitudId %d: %v",
+				i,
+				req.DocumentoSolicitudId,
+				err,
+			)
+		}
+		resultados = append(resultados, resultado)
+	}
+
+	return models.ActualizarEstadosDocumentoSolicitudResponse{
+		Resultados: resultados,
+		Total:      len(resultados),
+		Mensaje:    "Estados de los documentos actualizados correctamente",
+	}, nil
 }

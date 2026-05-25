@@ -1,11 +1,12 @@
 package models
 
 type EditarSolicitud struct {
-	TipoSolicitudId      int                            `json:"tipo_solicitud_id,omitempty"`
-	Formulario           map[string]interface{}         `json:"formulario,omitempty"`
-	Observacion          string                         `json:"observacion,omitempty"`
-	DocumentosNuevos     []DocumentoCambioEstadoRequest `json:"documentos_nuevos,omitempty"`
-	DocumentosDesactivar []int                          `json:"documentos_desactivar,omitempty"`
+	TipoSolicitudId       int                            `json:"tipo_solicitud_id,omitempty"`
+	CodigoAbreviacionTipo string                         `json:"cod_abreviacion_tipo_solicitud,omitempty"`
+	Formulario            map[string]interface{}         `json:"formulario,omitempty"`
+	Observacion           string                         `json:"observacion,omitempty"`
+	DocumentosNuevos      []DocumentoCambioEstadoRequest `json:"documentos_nuevos,omitempty"`
+	DocumentosDesactivar  []int                          `json:"documentos_desactivar,omitempty"`
 }
 
 type EditarSolicitudResponse struct {
