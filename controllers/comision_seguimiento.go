@@ -530,6 +530,135 @@ func (c *ComisionSeguimientoController) GetDocumentosPago() {
 	c.ServeJSON()
 }
 
+// GetEstadosCumplimiento ...
+// @Title Get Estados Cumplimiento
+// @Description Retorna los estados de comision cuyo codigo empieza por CUMP_ o INCUMP_. Usados para el dropdown del panel de cumplimiento.
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /estados_cumplimiento [get]
+func (c *ComisionSeguimientoController) GetEstadosCumplimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetEstadosCumplimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	data, err := services.ObtenerEstadosCumplimiento()
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "500", "Message": "Error obteniendo estados de cumplimiento", "Error": err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true, "Status": "200", "Message": "Consulta exitosa", "Data": data,
+	}
+	c.ServeJSON()
+}
+
+// GetHistorialCumplimiento ...
+// @Title Get Historial Cumplimiento
+// @Description Retorna el historial de registros de cumplimiento de una comision, ordenados mas reciente primero.
+// @Param	comision_id	path	int	true	"Id de la comision"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /historial_cumplimiento/:comision_id [get]
+func (c *ComisionSeguimientoController) GetHistorialCumplimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en GetHistorialCumplimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var comisionId int
+	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "400", "Message": "comision_id debe ser un entero positivo",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.ObtenerHistorialCumplimiento(comisionId)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "500", "Message": "Error obteniendo historial de cumplimiento", "Error": err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true, "Status": "200", "Message": "Consulta exitosa", "Data": data,
+	}
+	c.ServeJSON()
+}
+
+// PostRegistroCumplimiento ...
+// @Title Post Registro Cumplimiento
+// @Description Crea un nuevo registro de cumplimiento para una comision. Desactiva el historico previo y crea uno nuevo con el estado seleccionado.
+// @Param	body	body	models.CrearRegistroCumplimientoRequest	true	"Datos del registro"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @router /registro_cumplimiento [post]
+func (c *ComisionSeguimientoController) PostRegistroCumplimiento() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("[ComisionSeguimiento] panic en PostRegistroCumplimiento: %v", r)
+			c.Ctx.Output.SetStatus(500)
+			c.Data["json"] = map[string]interface{}{
+				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+			}
+			c.ServeJSON()
+		}
+	}()
+
+	var req models.CrearRegistroCumplimientoRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "400", "Message": "Body invalido: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	id, err := services.CrearRegistroCumplimiento(req)
+	if err != nil {
+		c.Ctx.Output.SetStatus(500)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false, "Status": "500", "Message": "Error creando registro de cumplimiento", "Error": err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(201)
+	c.Data["json"] = map[string]interface{}{
+		"Success": true, "Status": "201", "Message": "Registro creado exitosamente", "Data": map[string]interface{}{"id": id},
+	}
+	c.ServeJSON()
+}
+
 // GetComisionesDecano ...
 // @Title Get Comisiones Decano
 // @Description Retorna las comisiones de las facultades asignadas al decano, segun su cedula y datos del JBPM.
