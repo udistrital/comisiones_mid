@@ -46,6 +46,62 @@
                 }
             }
         },
+        "/comision/historico_solicitudes_prorroga/{id}": {
+            "get": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "Consulta el histórico de solicitudes de prórroga",
+                "operationId": "ProrrogaController.ConsultarHistoricoSolicitudesProrroga",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseHistoricoSolicitudProrroga"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido"
+                    },
+                    "500": {
+                        "description": "error interno"
+                    }
+                }
+            }
+        },
+        "/comision/validar_solicitud_prorroga/{id}": {
+            "get": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "valida si una comisión puede crear una nueva prórroga",
+                "operationId": "ProrrogaController.Validar Solicitud Prórroga",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "description": "Id comisión",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido"
+                    },
+                    "500": {
+                        "description": "error interno"
+                    }
+                }
+            }
+        },
         "/seguimiento/comentario": {
             "post": {
                 "tags": [
@@ -359,6 +415,93 @@
                 ],
                 "responses": {
                     "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/seguimiento/estados_cumplimiento": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna los estados de comision cuyo codigo empieza por CUMP_ o INCUMP_. Usados para el dropdown del panel de cumplimiento.",
+                "operationId": "ComisionSeguimientoController.Get Estados Cumplimiento",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/seguimiento/historial_cumplimiento/{comision_id}": {
+            "get": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Retorna el historial de registros de cumplimiento de una comision, ordenados mas reciente primero.",
+                "operationId": "ComisionSeguimientoController.Get Historial Cumplimiento",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "comision_id",
+                        "description": "Id de la comision",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/map[string]interface{}"
+                        }
+                    },
+                    "400": {
+                        "description": "{object} map[string]interface{}"
+                    },
+                    "500": {
+                        "description": "{object} map[string]interface{}"
+                    }
+                }
+            }
+        },
+        "/seguimiento/registro_cumplimiento": {
+            "post": {
+                "tags": [
+                    "seguimiento"
+                ],
+                "description": "Crea un nuevo registro de cumplimiento para una comision. Desactiva el historico previo y crea uno nuevo con el estado seleccionado.",
+                "operationId": "ComisionSeguimientoController.Post Registro Cumplimiento",
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Datos del registro",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CrearRegistroCumplimientoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
                         "description": "",
                         "schema": {
                             "$ref": "#/definitions/map[string]interface{}"
@@ -951,9 +1094,73 @@
                 }
             }
         },
+        "models.CrearRegistroCumplimientoRequest": {
+            "title": "CrearRegistroCumplimientoRequest",
+            "type": "object",
+            "properties": {
+                "comision_id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "descripcion": {
+                    "type": "string"
+                },
+                "estado_id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "rol": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HistoricoSolicitudProrroga": {
+            "title": "HistoricoSolicitudProrroga",
+            "type": "object",
+            "properties": {
+                "estado": {
+                    "type": "string"
+                },
+                "fecha_creacion": {
+                    "type": "string"
+                },
+                "historico_id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "solicitud_id": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+        },
         "models.Prorroga": {
             "title": "Prorroga",
             "type": "object"
+        },
+        "models.ResponseHistoricoSolicitudProrroga": {
+            "title": "ResponseHistoricoSolicitudProrroga",
+            "type": "object",
+            "properties": {
+                "Data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.HistoricoSolicitudProrroga"
+                    }
+                },
+                "Message": {
+                    "type": "string"
+                },
+                "Status": {
+                    "type": "string"
+                },
+                "Success": {
+                    "type": "boolean"
+                }
+            }
         },
         "models.Solicitud": {
             "title": "Solicitud",
