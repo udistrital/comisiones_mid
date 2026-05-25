@@ -10,87 +10,242 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
-func CrearSolicitudProrroga(
-	solicitudProrroga models.CrearSolicitudProrrogaEntrada,
-) (prorroga models.CrearSolicitudProrrogaSalida, err error) {
+func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
 
 	// =========================
-	// CONSULTAR SI YA TIENE UNA PRORROGA EN CURSO Y NO RECHAZADA
+	// CONSULTAR SOLICITUDES DE PRÓRROGA
 	// =========================
 
 	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
 
-	err = request.GetJson(
+	err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
 			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
-			fmt.Sprintf("%d", solicitudProrroga.ComisionId),
+			fmt.Sprintf("%d", comisionId),
 		&responseBusquedaSolicitudProrroga,
+	)
+
+	if err != nil {
+		return false, "", err
+	}
+
+	if !responseBusquedaSolicitudProrroga.Success {
+		return false, "",
+			fmt.Errorf(
+				"error consultando solicitudes de prórroga: status %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudProrroga.Status != "200" {
+		return false, "",
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitudes de prórroga: %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	// =========================
+	// SI NO HAY SOLICITUDES
+	// =========================
+
+	solicitudes := responseBusquedaSolicitudProrroga.Data
+
+	if len(solicitudes) == 0 {
+		return true, "", nil
+	}
+
+	// =========================
+	// VALIDAR ÚLTIMO ESTADO
+	// =========================
+
+	for _, solicitud := range solicitudes {
+
+		var responseHistorico models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+
+				fmt.Sprintf("%d", solicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistorico,
+		)
+
+		if err != nil {
+			return false, "", err
+		}
+
+		if !responseHistorico.Success {
+			return false, "",
+				fmt.Errorf(
+					"error consultando histórico de solicitudes de prórroga: status %s",
+					responseHistorico.Status,
+				)
+		}
+
+		if responseHistorico.Status != "200" {
+			return false, "",
+				fmt.Errorf(
+					"respuesta inesperada consultando histórico de solicitudes de prórroga: %s",
+					responseHistorico.Status,
+				)
+		}
+
+		// SI NO TIENE HISTÓRICO CONTINÚA
+		if len(responseHistorico.Data) == 0 {
+			continue
+		}
+
+		estado := strings.TrimSpace(
+			strings.ToLower(
+				responseHistorico.Data[0].EstadoSolicitudId.Nombre,
+			),
+		)
+
+		// =========================
+		// SI NO ESTÁ RECHAZADA
+		// =========================
+
+		if estado != "no aprobada" {
+
+			return false,
+				responseHistorico.Data[0].EstadoSolicitudId.Nombre,
+				nil
+		}
+	}
+
+	// =========================
+	// TODAS ESTÁN RECHAZADAS
+	// =========================
+
+	return true, "", nil
+}
+
+func ConsultarHistoricoSolicitudesProrroga(
+	comisionId int,
+) ([]models.HistoricoSolicitudProrroga, error) {
+
+	// =========================
+	// CONSULTAR SOLICITUDES DE PRÓRROGA
+	// =========================
+
+	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
+			fmt.Sprintf("%d", comisionId),
+		&responseBusquedaSolicitudProrroga,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !responseBusquedaSolicitudProrroga.Success {
+		return nil,
+			fmt.Errorf(
+				"error consultando solicitudes de prórroga: status %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudProrroga.Status != "200" {
+		return nil,
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitudes de prórroga: %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	// =========================
+	// ARMAR HISTÓRICO
+	// =========================
+
+	historicoSolicitudes := []models.HistoricoSolicitudProrroga{}
+
+	for _, solicitud := range responseBusquedaSolicitudProrroga.Data {
+
+		// =========================
+		// CONSULTAR ÚLTIMO HISTÓRICO
+		// =========================
+
+		var responseHistorico models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+
+				fmt.Sprintf("%d", solicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistorico,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if !responseHistorico.Success {
+			return nil,
+				fmt.Errorf(
+					"error consultando histórico de solicitudes de prórroga: status %s",
+					responseHistorico.Status,
+				)
+		}
+
+		if responseHistorico.Status != "200" {
+			return nil,
+				fmt.Errorf(
+					"respuesta inesperada consultando histórico de solicitudes de prórroga: %s",
+					responseHistorico.Status,
+				)
+		}
+
+		// =========================
+		// SI NO TIENE HISTÓRICO
+		// =========================
+
+		if len(responseHistorico.Data) == 0 {
+			continue
+		}
+
+		ultimoHistorico := responseHistorico.Data[0]
+
+		// =========================
+		// AGREGAR A LISTA
+		// =========================
+
+		historicoSolicitudes = append(
+			historicoSolicitudes,
+			models.HistoricoSolicitudProrroga{
+				SolicitudId:   solicitud.Id,
+				HistoricoId:   ultimoHistorico.Id,
+				FechaCreacion: ultimoHistorico.SolicitudId.FechaCreacion,
+				Estado:        ultimoHistorico.EstadoSolicitudId.Nombre,
+			},
+		)
+	}
+
+	return historicoSolicitudes, nil
+}
+
+func CrearSolicitudProrroga(
+	solicitudProrroga models.CrearSolicitudProrrogaEntrada,
+) (prorroga models.CrearSolicitudProrrogaSalida, err error) {
+
+	puedeCrear, estadoActual, err := ValidarPuedeCrearSolicitudProrroga(
+		solicitudProrroga.ComisionId,
 	)
 
 	if err != nil {
 		return models.CrearSolicitudProrrogaSalida{}, err
 	}
 
-	if !responseBusquedaSolicitudProrroga.Success {
+	if !puedeCrear {
 		return models.CrearSolicitudProrrogaSalida{},
 			fmt.Errorf(
-				"error consultando solicitud base: status %s",
-				responseBusquedaSolicitudProrroga.Status,
+				"El maestro ya tiene una solicitud de prórroga en estado %s",
+				estadoActual,
 			)
-	}
-
-	if responseBusquedaSolicitudProrroga.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf(
-				"respuesta inesperada consultando solicitud base: %s",
-				responseBusquedaSolicitudProrroga.Status,
-			)
-	}
-
-	solicitudes := responseBusquedaSolicitudProrroga.Data
-	for _, idsolicitud := range solicitudes {
-		var responseHistoricoSolicitudesProrroga models.ResponseListaHistoricoEstadoSolicitud
-
-		err = request.GetJson(
-			beego.AppConfig.String("UrlComisionesCrud")+
-				"historico_estado_solicitud?query=solicitud_id:"+fmt.Sprintf("%d", idsolicitud.Id)+
-				"&sortby=fecha_creacion&order=desc&limit=1",
-			&responseHistoricoSolicitudesProrroga,
-		)
-
-		if err != nil {
-			return models.CrearSolicitudProrrogaSalida{}, err
-		}
-
-		if !responseHistoricoSolicitudesProrroga.Success {
-			return models.CrearSolicitudProrrogaSalida{},
-				fmt.Errorf(
-					"error consultando los historicos de solicitud de prorroga: status %s",
-					responseHistoricoSolicitudesProrroga.Status,
-				)
-		}
-
-		if responseHistoricoSolicitudesProrroga.Status != "200" {
-			return models.CrearSolicitudProrrogaSalida{},
-				fmt.Errorf(
-					"error consultando los historicos de solicitud de prorroga: %s",
-					responseHistoricoSolicitudesProrroga.Status,
-				)
-		}
-
-		if len(responseHistoricoSolicitudesProrroga.Data) == 0 {
-			continue
-		}
-		estado := strings.TrimSpace(strings.ToLower(
-			responseHistoricoSolicitudesProrroga.Data[0].EstadoSolicitudId.Nombre,
-		))
-
-		if estado != "no aprobada" {
-			return models.CrearSolicitudProrrogaSalida{},
-				fmt.Errorf(
-					"El maestro a tiene una solicitud en estado %s", estado,
-				)
-		}
 	}
 
 	// =========================

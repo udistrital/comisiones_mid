@@ -250,4 +250,22 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"],
+		beego.ControllerComments{
+			Method:           "ValidarSolicitudProrroga",
+			Router:           "/validar_solicitud_prorroga/:id",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:ProrrogaController"],
+		beego.ControllerComments{
+			Method:           "ConsultarHistoricoSolicitudesProrroga",
+			Router:           "/historico_solicitudes_prorroga/:id",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 }
