@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/helpers"
@@ -9,9 +10,247 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
+
+	// =========================
+	// CONSULTAR SOLICITUDES DE PRÓRROGA
+	// =========================
+
+	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
+			fmt.Sprintf("%d", comisionId),
+		&responseBusquedaSolicitudProrroga,
+	)
+
+	if err != nil {
+		return false, "", err
+	}
+
+	if !responseBusquedaSolicitudProrroga.Success {
+		return false, "",
+			fmt.Errorf(
+				"error consultando solicitudes de prórroga: status %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudProrroga.Status != "200" {
+		return false, "",
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitudes de prórroga: %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	// =========================
+	// SI NO HAY SOLICITUDES
+	// =========================
+
+	solicitudes := responseBusquedaSolicitudProrroga.Data
+
+	if len(solicitudes) == 0 {
+		return true, "", nil
+	}
+
+	// =========================
+	// VALIDAR ÚLTIMO ESTADO
+	// =========================
+
+	for _, solicitud := range solicitudes {
+
+		var responseHistorico models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+
+				fmt.Sprintf("%d", solicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistorico,
+		)
+
+		if err != nil {
+			return false, "", err
+		}
+
+		if !responseHistorico.Success {
+			return false, "",
+				fmt.Errorf(
+					"error consultando histórico de solicitudes de prórroga: status %s",
+					responseHistorico.Status,
+				)
+		}
+
+		if responseHistorico.Status != "200" {
+			return false, "",
+				fmt.Errorf(
+					"respuesta inesperada consultando histórico de solicitudes de prórroga: %s",
+					responseHistorico.Status,
+				)
+		}
+
+		// SI NO TIENE HISTÓRICO CONTINÚA
+		if len(responseHistorico.Data) == 0 {
+			continue
+		}
+
+		estado := strings.TrimSpace(
+			strings.ToLower(
+				responseHistorico.Data[0].EstadoSolicitudId.Nombre,
+			),
+		)
+
+		// =========================
+		// SI NO ESTÁ RECHAZADA
+		// =========================
+
+		if estado != "no aprobada" {
+
+			return false,
+				responseHistorico.Data[0].EstadoSolicitudId.Nombre,
+				nil
+		}
+	}
+
+	// =========================
+	// TODAS ESTÁN RECHAZADAS
+	// =========================
+
+	return true, "", nil
+}
+
+func ConsultarHistoricoSolicitudesProrroga(
+	comisionId int,
+) ([]models.HistoricoSolicitudProrroga, error) {
+
+	// =========================
+	// CONSULTAR SOLICITUDES DE PRÓRROGA
+	// =========================
+
+	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
+			fmt.Sprintf("%d", comisionId),
+		&responseBusquedaSolicitudProrroga,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !responseBusquedaSolicitudProrroga.Success {
+		return nil,
+			fmt.Errorf(
+				"error consultando solicitudes de prórroga: status %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudProrroga.Status != "200" {
+		return nil,
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitudes de prórroga: %s",
+				responseBusquedaSolicitudProrroga.Status,
+			)
+	}
+
+	// =========================
+	// ARMAR HISTÓRICO
+	// =========================
+
+	historicoSolicitudes := []models.HistoricoSolicitudProrroga{}
+
+	for _, solicitud := range responseBusquedaSolicitudProrroga.Data {
+
+		// =========================
+		// CONSULTAR ÚLTIMO HISTÓRICO
+		// =========================
+
+		var responseHistorico models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+
+				fmt.Sprintf("%d", solicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistorico,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if !responseHistorico.Success {
+			return nil,
+				fmt.Errorf(
+					"error consultando histórico de solicitudes de prórroga: status %s",
+					responseHistorico.Status,
+				)
+		}
+
+		if responseHistorico.Status != "200" {
+			return nil,
+				fmt.Errorf(
+					"respuesta inesperada consultando histórico de solicitudes de prórroga: %s",
+					responseHistorico.Status,
+				)
+		}
+
+		// =========================
+		// SI NO TIENE HISTÓRICO
+		// =========================
+
+		if len(responseHistorico.Data) == 0 {
+			continue
+		}
+
+		ultimoHistorico := responseHistorico.Data[0]
+
+		// =========================
+		// AGREGAR A LISTA
+		// =========================
+
+		historicoSolicitudes = append(
+			historicoSolicitudes,
+			models.HistoricoSolicitudProrroga{
+				SolicitudId:   solicitud.Id,
+				HistoricoId:   ultimoHistorico.Id,
+				FechaCreacion: ultimoHistorico.SolicitudId.FechaCreacion,
+				Estado:        ultimoHistorico.EstadoSolicitudId.Nombre,
+			},
+		)
+	}
+
+	return historicoSolicitudes, nil
+}
+
 func CrearSolicitudProrroga(
 	solicitudProrroga models.CrearSolicitudProrrogaEntrada,
 ) (prorroga models.CrearSolicitudProrrogaSalida, err error) {
+
+	puedeCrear, estadoActual, err := ValidarPuedeCrearSolicitudProrroga(
+		solicitudProrroga.ComisionId,
+	)
+
+	if err != nil {
+		return models.CrearSolicitudProrrogaSalida{}, err
+	}
+
+	if !puedeCrear {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"El maestro ya tiene una solicitud de prórroga en estado %s",
+				estadoActual,
+			)
+	}
+
+	// =========================
+	// CONSULTAR SOLICITUD BASE
+	// =========================
 
 	type TipoDocumentoTemp struct {
 		Id                int
@@ -26,8 +265,6 @@ func CrearSolicitudProrroga(
 	// =========================
 	// CONSULTAR SOLICITUD BASE
 	// =========================
-
-	fmt.Println("BUSCA SOLICITUD")
 
 	var responseSolicitud models.ResponseListaSolicitud
 
@@ -72,8 +309,6 @@ func CrearSolicitudProrroga(
 	// =========================
 	// CONSULTAR TIPO SOLICITUD
 	// =========================
-
-	fmt.Println("BUSCA TIPO")
 
 	var responseTipo models.ResponseListaTipoSolicitud
 
@@ -201,8 +436,6 @@ func CrearSolicitudProrroga(
 	// CONSULTAR TIPOS DOCUMENTO
 	// =========================
 
-	fmt.Println("BUSCA TIPOS DOCUMENTO")
-
 	var responseTipoDocumentoSolicitud models.ResponseListaTipoDocumentoSolicitud
 
 	err = request.GetJson(
@@ -277,8 +510,6 @@ func CrearSolicitudProrroga(
 	// CREAR SOLICITUD
 	// =========================
 
-	fmt.Println("CREA SOLICITUD")
-
 	req := models.SolicitudCreateRequest{
 		TerceroId: solicitudComision.TerceroId,
 
@@ -333,8 +564,6 @@ func CrearSolicitudProrroga(
 	// =========================
 	// CREAR HISTORICO
 	// =========================
-
-	fmt.Println("CREA HISTORICO")
 
 	historico := models.HistoricoEstadoSolicitud{
 		SolicitudId: &models.Solicitud{
