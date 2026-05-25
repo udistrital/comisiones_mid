@@ -152,6 +152,19 @@ func CrearRegistroCumplimiento(req models.CrearRegistroCumplimientoRequest) (int
 		return 0, fmt.Errorf("no está configurado UrlComisionesCrud")
 	}
 
+	// Resolver TerceroId a partir de la cédula del usuario que registra el cumplimiento.
+	var terceroId int
+	if cedula := strings.TrimSpace(req.NumeroIdentificacion); cedula != "" {
+		baseTerceros := strings.TrimSpace(beego.AppConfig.String("UrlTercerosCrud"))
+		if baseTerceros != "" {
+			if id, err := GetTerceroIdByNumeroIdentificacion(baseTerceros, cedula); err == nil {
+				terceroId = id
+			} else {
+				logs.Warning("[Cumplimiento] no se pudo resolver TerceroId para cedula=%s: %v", cedula, err)
+			}
+		}
+	}
+
 	// Validar que estado_id corresponde a un estado de cumplimiento.
 	estadoCodigo, err := validarEstadoCumplimiento(baseCrud, req.EstadoId)
 	if err != nil {
@@ -169,6 +182,7 @@ func CrearRegistroCumplimiento(req models.CrearRegistroCumplimientoRequest) (int
 	payload := map[string]interface{}{
 		"ComisionId":       map[string]interface{}{"Id": req.ComisionId},
 		"EstadoComisionId": map[string]interface{}{"Id": req.EstadoId},
+		"TerceroId":        terceroId,
 		"RolUsuario":       strings.TrimSpace(req.Rol),
 		"Descripcion":      strings.TrimSpace(req.Descripcion),
 		"Activo":           true,

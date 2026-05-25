@@ -30,7 +30,7 @@ func getHistoricoActivoComision(baseCrud string, comisionId int) (int, error) {
 
 	q := u.Query()
 	q.Set("query", fmt.Sprintf("ComisionId.Id:%d,Activo:true", comisionId))
-	q.Set("sortby", "FechaCreacion")
+	q.Set("sortby", "Id")
 	q.Set("order", "desc")
 	q.Set("limit", "1")
 	u.RawQuery = q.Encode()
