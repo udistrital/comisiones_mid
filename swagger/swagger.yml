@@ -698,6 +698,8 @@ definitions:
         format: int64
       nombre:
         type: string
+      numero_identificacion:
+        type: string
       rol:
         type: string
   models.Prorroga:

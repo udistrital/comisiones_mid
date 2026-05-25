@@ -22,9 +22,10 @@ type RegistroCumplimientoItem struct {
 
 // CrearRegistroCumplimientoRequest es el body del POST /registro_cumplimiento.
 type CrearRegistroCumplimientoRequest struct {
-	ComisionId  int    `json:"comision_id"`
-	EstadoId    int    `json:"estado_id"`
-	Descripcion string `json:"descripcion"`
-	Rol         string `json:"rol"`
-	Nombre      string `json:"nombre"`
+	ComisionId           int    `json:"comision_id"`
+	EstadoId             int    `json:"estado_id"`
+	Descripcion          string `json:"descripcion"`
+	Rol                  string `json:"rol"`
+	Nombre               string `json:"nombre"`
+	NumeroIdentificacion string `json:"numero_identificacion"`
 }
