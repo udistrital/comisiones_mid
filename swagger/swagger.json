@@ -1112,6 +1112,9 @@
                 "nombre": {
                     "type": "string"
                 },
+                "numero_identificacion": {
+                    "type": "string"
+                },
                 "rol": {
                     "type": "string"
                 }
