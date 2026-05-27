@@ -72,7 +72,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 		return respuesta, map[string]interface{}{"error": "Estructura inválida de TerceroId"}
 	}
 
-	id_tercero := int(terceroMap["Id"].(float64))
+	idTercero := int(terceroMap["Id"].(float64))
 
 	tipoSolicitudId, err := resolverTipoSolicitudId(solicitud.TipoSolicitudId, solicitud.CodigoAbreviacionTipo)
 	if err != nil {
@@ -80,7 +80,7 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 	}
 
 	req := models.SolicitudCreateRequest{
-		TerceroId: id_tercero,
+		TerceroId: idTercero,
 		Activo:    true,
 		TipoSolicitudId: models.IdReference{
 			Id: tipoSolicitudId,
@@ -141,12 +141,12 @@ func CrearSolicitud(solicitud models.CrearSolicitudEntrada) (respuesta models.So
 		return respuesta, map[string]interface{}{"error": "Error consultando estado"}
 	}
 	dataEstado := respEstado["Data"].([]interface{})
-	id_estado := int(dataEstado[0].(map[string]interface{})["Id"].(float64))
+	idEstado := int(dataEstado[0].(map[string]interface{})["Id"].(float64))
 	historico := models.HistoricoEstadoSolicitud{
 		SolicitudId:       &solicitudTemp,
-		EstadoSolicitudId: &models.EstadoSolicitud{Id: id_estado},
+		EstadoSolicitudId: &models.EstadoSolicitud{Id: idEstado},
 		RolUsuario:        solicitud.CodigoAbreviacionRol,
-		TerceroId:         id_tercero,
+		TerceroId:         idTercero,
 		Activo:            true,
 	}
 
@@ -494,10 +494,10 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 	if err := request.GetJson(beego.AppConfig.String("UrlTercerosCrud")+"datos_identificacion?query=Numero:"+fmt.Sprintf("%d", identificacion), &tercero); err == nil {
 		if len(tercero) > 0 && len(tercero[0]) > 0 {
 			if tercero_comprobacion, ok := tercero[0]["TerceroId"].(map[string]interface{}); ok {
-				if id_tercero, ok := tercero_comprobacion["Id"].(float64); ok {
-					id_tercero_busqueda := int(id_tercero)
+				if idTercero, ok := tercero_comprobacion["Id"].(float64); ok {
+					idTerceroBusqueda := int(idTercero)
 
-					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", id_tercero_busqueda),
+					if err := request.GetJson(beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", idTerceroBusqueda),
 						&persona); err == nil {
 						if data, ok := persona["Data"].([]interface{}); ok && len(data) > 0 {
 							for _, item := range data {
@@ -526,21 +526,21 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 											sol.Programa = datosFormulario.Solicitante.Q7Proyecto
 											sol.Nombre = datosFormulario.Solicitante.Q3NombresApellidos
 										}
-										var respuesta_historico_estado_solicitud_actual map[string]interface{}
-										var id_estado_solicitud int
+										var respuestaHistoricoEstadoSolicitudActual map[string]interface{}
+										var idEstadoSolicitud int
 										if err := request.GetJson(
 											beego.AppConfig.String("UrlComisionesCrud")+"historico_estado_solicitud?query=solicitudId__Id:"+idStr+",Activo:true&sortby=FechaCreacion&order=desc&limit=1",
-											&respuesta_historico_estado_solicitud_actual,
+											&respuestaHistoricoEstadoSolicitudActual,
 										); err == nil {
-											if data, ok := respuesta_historico_estado_solicitud_actual["Data"].([]interface{}); ok && len(data) > 0 {
+											if data, ok := respuestaHistoricoEstadoSolicitudActual["Data"].([]interface{}); ok && len(data) > 0 {
 
 												if primerRegistro, ok := data[0].(map[string]interface{}); ok {
 													if estado, ok := primerRegistro["EstadoSolicitudId"].(map[string]interface{}); ok {
 														switch v := estado["Id"].(type) {
 														case float64:
-															id_estado_solicitud = int(v)
+															idEstadoSolicitud = int(v)
 														case int:
-															id_estado_solicitud = v
+															idEstadoSolicitud = v
 														default:
 															fmt.Println("Tipo inesperado en Id")
 														}
@@ -552,7 +552,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 														}
 
 														sol.EstadoSolicitud = &models.EstadoSolicitud{
-															Id:     id_estado_solicitud,
+															Id:     idEstadoSolicitud,
 															Nombre: nombreEstado,
 														}
 													}
@@ -578,7 +578,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 	}
 }
 
-func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetalles, outputError map[string]interface{}) {
+func BuscarDetallesSolicitud(idSolicitud int) (respuesta models.SolicitudDetalles, outputError map[string]interface{}) {
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -591,19 +591,19 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 		}
 	}()
 
-	var respuesta_historico map[string]interface{}
+	var respuestaHistorico map[string]interface{}
 
 	err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"historico_estado_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+
+			"historico_estado_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud)+
 			",Activo:true&sortby=FechaCreacion&order=desc&limit=-1",
-		&respuesta_historico,
+		&respuestaHistorico,
 	)
 
 	if err != nil {
 		return respuesta, nil
 	}
-	data, ok := respuesta_historico["Data"].([]interface{})
+	data, ok := respuestaHistorico["Data"].([]interface{})
 	if !ok || len(data) == 0 {
 		return models.SolicitudDetalles{}, map[string]interface{}{
 			"error":  "no se encontró solicitud",
@@ -611,64 +611,64 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 		}
 	}
 
-	primer_registro, ok := data[0].(map[string]interface{})
+	primerRegistro, ok := data[0].(map[string]interface{})
 	if !ok {
 		return respuesta, nil
 	}
 
-	info_solicitud, ok := primer_registro["SolicitudId"].(map[string]interface{})
+	infoSolicitud, ok := primerRegistro["SolicitudId"].(map[string]interface{})
 	if !ok {
 		return respuesta, nil
 	}
 
-	if registro_tipo_solicitud, ok := info_solicitud["TipoSolicitudId"].(map[string]interface{}); ok {
-		tipo_solicitud_historico := models.TipoSolicitud{
-			Id:                int(registro_tipo_solicitud["Id"].(float64)),
-			Nombre:            fmt.Sprintf("%v", registro_tipo_solicitud["Nombre"]),
-			CodigoAbreviacion: fmt.Sprintf("%v", registro_tipo_solicitud["CodigoAbreviacion"]),
+	if registroTipoSolicitud, ok := infoSolicitud["TipoSolicitudId"].(map[string]interface{}); ok {
+		tipoSolicitudHistorico := models.TipoSolicitud{
+			Id:                int(registroTipoSolicitud["Id"].(float64)),
+			Nombre:            fmt.Sprintf("%v", registroTipoSolicitud["Nombre"]),
+			CodigoAbreviacion: fmt.Sprintf("%v", registroTipoSolicitud["CodigoAbreviacion"]),
 		}
 
-		if estado_solicitud_actual, ok := primer_registro["EstadoSolicitudId"].(map[string]interface{}); ok {
-			estado_solicitud_info := models.EstadoSolicitud{
-				Id:                int(estado_solicitud_actual["Id"].(float64)),
-				Nombre:            fmt.Sprintf("%v", estado_solicitud_actual["Nombre"]),
-				Descripcion:       fmt.Sprintf("%v", estado_solicitud_actual["Descripcion"]),
-				CodigoAbreviacion: fmt.Sprintf("%v", estado_solicitud_actual["CodigoAbreviacion"]),
+		if estadoSolicitudActual, ok := primerRegistro["EstadoSolicitudId"].(map[string]interface{}); ok {
+			estadoSolicitudInfo := models.EstadoSolicitud{
+				Id:                int(estadoSolicitudActual["Id"].(float64)),
+				Nombre:            fmt.Sprintf("%v", estadoSolicitudActual["Nombre"]),
+				Descripcion:       fmt.Sprintf("%v", estadoSolicitudActual["Descripcion"]),
+				CodigoAbreviacion: fmt.Sprintf("%v", estadoSolicitudActual["CodigoAbreviacion"]),
 			}
-			respuesta.EstadoSolicitud = &estado_solicitud_info
+			respuesta.EstadoSolicitud = &estadoSolicitudInfo
 		}
 
-		solicitud_historico := models.Solicitud{
-			Id:                int(info_solicitud["Id"].(float64)),
-			TerceroId:         int(info_solicitud["TerceroId"].(float64)),
-			TipoSolicitudId:   &tipo_solicitud_historico,
-			ObservacionCierre: fmt.Sprintf("%v", info_solicitud["ObservacionCierre"]),
-			Activo:            info_solicitud["Activo"].(bool),
+		solicitudHistorico := models.Solicitud{
+			Id:                int(infoSolicitud["Id"].(float64)),
+			TerceroId:         int(infoSolicitud["TerceroId"].(float64)),
+			TipoSolicitudId:   &tipoSolicitudHistorico,
+			ObservacionCierre: fmt.Sprintf("%v", infoSolicitud["ObservacionCierre"]),
+			Activo:            infoSolicitud["Activo"].(bool),
 		}
-		respuesta.Solicitud = &solicitud_historico
+		respuesta.Solicitud = &solicitudHistorico
 	}
 
-	var respuesta_detalle_formulario map[string]interface{}
+	var respuestaDetalleFormulario map[string]interface{}
 	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud),
-		&respuesta_detalle_formulario,
+		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud),
+		&respuestaDetalleFormulario,
 	); err == nil {
 
-		if data_formulario, ok := respuesta_detalle_formulario["Data"].([]interface{}); ok && len(data_formulario) > 0 {
+		if data_formulario, ok := respuestaDetalleFormulario["Data"].([]interface{}); ok && len(data_formulario) > 0 {
 			if registro_formulario, ok := data_formulario[0].(map[string]interface{}); ok {
 				respuesta.Formulario = registro_formulario["Formulario"]
 			}
 		}
 	}
 
-	var respuesta_documentos map[string]interface{}
+	var respuestaDocumentos map[string]interface{}
 
 	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", id_solicitud)+",Activo:true&limit=-1",
-		&respuesta_documentos,
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud)+",Activo:true&limit=-1",
+		&respuestaDocumentos,
 	); err == nil {
 
-		if data_documentos, ok := respuesta_documentos["Data"].([]interface{}); ok && len(data_documentos) > 0 {
+		if data_documentos, ok := respuestaDocumentos["Data"].([]interface{}); ok && len(data_documentos) > 0 {
 			for _, doc := range data_documentos {
 				if documento, ok := doc.(map[string]interface{}); ok {
 					idDocumentoComision := int(documento["Id"].(float64))
@@ -679,18 +679,18 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 						}
 					}
 					docId := int(documento["DocumentoId"].(float64))
-					var detalle_doc map[string]interface{}
+					var detalleDoc map[string]interface{}
 					if err := request.GetJson(
 						beego.AppConfig.String("UrlDocumentos")+"documento/"+fmt.Sprintf("%d", docId),
-						&detalle_doc,
+						&detalleDoc,
 					); err == nil {
 
-						if len(detalle_doc) == 0 {
+						if len(detalleDoc) == 0 {
 							continue
 						}
-						idDocumento := int(detalle_doc["Id"].(float64))
-						nombre, _ := detalle_doc["Nombre"].(string)
-						enlace, _ := detalle_doc["Enlace"].(string)
+						idDocumento := int(detalleDoc["Id"].(float64))
+						nombre, _ := detalleDoc["Nombre"].(string)
+						enlace, _ := detalleDoc["Enlace"].(string)
 
 						// TipoDocumento
 						var tipo *models.TipoDocumentoSolicitud
@@ -715,7 +715,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 						}
 
 						if nombre != "" && enlace != "" {
-							documento_aux := models.DocumentoDetalle{
+							documentoAux := models.DocumentoDetalle{
 								Id:          idDocumentoComision,
 								Rol:         rolDocumentoComision,
 								IdDocumento: idDocumento,
@@ -725,7 +725,7 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 								Estado:      estado,
 							}
 
-							respuesta.Documentos = append(respuesta.Documentos, documento_aux)
+							respuesta.Documentos = append(respuesta.Documentos, documentoAux)
 						}
 					}
 				}
@@ -735,16 +735,16 @@ func BuscarDetallesSolicitud(id_solicitud int) (respuesta models.SolicitudDetall
 		}
 	}
 
-	var respuesta_observaciones map[string]interface{}
+	var respuestaObservaciones map[string]interface{}
 
 	if err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
 			"observacion?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+
-			fmt.Sprintf("%d", id_solicitud)+",Activo:true&limit=-1",
-		&respuesta_observaciones,
+			fmt.Sprintf("%d", idSolicitud)+",Activo:true&limit=-1",
+		&respuestaObservaciones,
 	); err == nil {
 
-		if data, ok := respuesta_observaciones["Data"].([]interface{}); ok && len(data) > 0 {
+		if data, ok := respuestaObservaciones["Data"].([]interface{}); ok && len(data) > 0 {
 
 			for _, item := range data {
 
