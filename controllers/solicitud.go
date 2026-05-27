@@ -314,7 +314,8 @@ func (c *SolicitudController) DetallesSolicitud() {
 // @Failure 403 :id is empty
 // @router /:id [get]
 func (c *SolicitudController) GetOne() {
-
+	// Intencionalmente vacío: la consulta individual de solicitudes no está expuesta
+	// en este MID porque el flujo actual usa endpoints funcionales específicos.
 }
 
 // GetAll ...
@@ -330,7 +331,8 @@ func (c *SolicitudController) GetOne() {
 // @Failure 403
 // @router / [get]
 func (c *SolicitudController) GetAll() {
-
+	// Intencionalmente vacío: la consulta general de solicitudes no está expuesta
+	// en este MID porque los listados requeridos se resuelven mediante endpoints específicos.
 }
 
 // Put ...
@@ -379,7 +381,8 @@ func (c *SolicitudController) Put() {
 // @Failure 403 id is empty
 // @router /:id [delete]
 func (c *SolicitudController) Delete() {
-
+	// Intencionalmente vacío: no se permite eliminación directa de solicitudes
+	// desde este MID para preservar la trazabilidad del flujo y sus estados asociados.
 }
 
 // PostEstados ...
