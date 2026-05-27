@@ -9,39 +9,42 @@ import (
 	"github.com/udistrital/comisiones_mid/models"
 )
 
+const crearDocumentoFunction = "/CrearDocumento"
+const obtenerDatosFormularioFunction = "/ObtenerDatosFormulario"
+
 func CrearDocumento(documentos []models.CrearDocumentoGestorDocumental) (resultado []map[string]interface{}, outputError map[string]interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			outputError = map[string]interface{}{"funcion": "/CrearDocumento", "err": err, "status": "404"}
+			outputError = map[string]interface{}{"funcion": crearDocumentoFunction, "err": err, "status": "404"}
 			panic(outputError)
 		}
 	}()
 
-	var respuesta_creacion map[string]interface{}
+	var respuestaCreacion map[string]interface{}
 	resultado = []map[string]interface{}{}
 
 	url := beego.AppConfig.String("UrlGestorDocumental") + "document/upload"
 
-	status, err := PostJsonTest(url, documentos, &respuesta_creacion)
+	status, err := PostJsonTest(url, documentos, &respuestaCreacion)
 	if err != nil {
-		outputError = map[string]interface{}{"funcion": "/CrearDocumento", "err": err.Error(), "status": "500"}
+		outputError = map[string]interface{}{"funcion": crearDocumentoFunction, "err": err.Error(), "status": "500"}
 		return resultado, outputError
 	}
 
 	if status != 200 && status != 201 {
 		outputError = map[string]interface{}{
-			"funcion": "/CrearDocumento",
-			"err":     fmt.Sprintf("gestor documental respondió %d: %v", status, respuesta_creacion),
+			"funcion": crearDocumentoFunction,
+			"err":     fmt.Sprintf("gestor documental respondió %d: %v", status, respuestaCreacion),
 			"status":  strconv.Itoa(status),
 		}
 		return resultado, outputError
 	}
 
-	res, ok := respuesta_creacion["res"]
+	res, ok := respuestaCreacion["res"]
 	if !ok {
 		outputError = map[string]interface{}{
-			"funcion": "/CrearDocumento",
-			"err":     fmt.Sprintf("respuesta del gestor documental sin clave 'res': %v", respuesta_creacion),
+			"funcion": crearDocumentoFunction,
+			"err":     fmt.Sprintf("respuesta del gestor documental sin clave 'res': %v", respuestaCreacion),
 			"status":  "500",
 		}
 		return resultado, outputError
@@ -74,7 +77,7 @@ func ObtenerDatosFormulario(detalleSolicitud map[string]interface{}) (datos mode
 	defer func() {
 		if err := recover(); err != nil {
 			outputError = map[string]interface{}{
-				"funcion": "/ObtenerDatosFormulario",
+				"funcion": obtenerDatosFormularioFunction,
 				"err":     err,
 				"status":  "404",
 			}
@@ -88,7 +91,7 @@ func ObtenerDatosFormulario(detalleSolicitud map[string]interface{}) (datos mode
 
 				if err := json.Unmarshal([]byte(formularioStr), &datos); err != nil {
 					outputError = map[string]interface{}{
-						"funcion": "/ObtenerDatosFormulario",
+						"funcion": obtenerDatosFormularioFunction,
 						"err":     err.Error(),
 						"status":  "404",
 					}
@@ -101,7 +104,7 @@ func ObtenerDatosFormulario(detalleSolicitud map[string]interface{}) (datos mode
 	}
 
 	outputError = map[string]interface{}{
-		"funcion": "/ObtenerDatosFormulario",
+		"funcion": obtenerDatosFormularioFunction,
 		"err":     "no se encontró la información de Formulario",
 		"status":  "404",
 	}
