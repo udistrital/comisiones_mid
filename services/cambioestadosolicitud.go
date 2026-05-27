@@ -13,6 +13,8 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const historicoEstadoSolicitudPath = "/historico_estado_solicitud/%d"
+
 func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudRequest) (models.CambioEstadoSolicitudResponse, error) {
 	if solicitudId <= 0 {
 		return models.CambioEstadoSolicitudResponse{}, fmt.Errorf("solicitudId es obligatorio")
@@ -386,7 +388,7 @@ func GetHistoricoActivoActual(base string, solicitudId int) (map[string]interfac
 }
 
 func DesActivarHistorico(base string, historicoId int) error {
-	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	getURL := helpers.JoinURL(base, fmt.Sprintf(historicoEstadoSolicitudPath, historicoId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
 	}
@@ -449,7 +451,7 @@ func EliminarObservacion(baseCrud string, observacionId int) error {
 }
 
 func EliminarHistorico(baseCrud string, historicoId int) error {
-	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf(historicoEstadoSolicitudPath, historicoId))
 	if err := helpers.ValidateAbsoluteURL(deleteURL); err != nil {
 		return err
 	}
@@ -463,7 +465,7 @@ func EliminarHistorico(baseCrud string, historicoId int) error {
 }
 
 func ActivarHistorico(base string, historicoId int) error {
-	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	getURL := helpers.JoinURL(base, fmt.Sprintf(historicoEstadoSolicitudPath, historicoId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
 	}
