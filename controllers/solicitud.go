@@ -13,6 +13,8 @@ import (
 	"github.com/udistrital/comisiones_mid/services"
 )
 
+const invalidJSONMessage = "JSON inválido: "
+
 // SolicitudController operations for Solicitud
 type SolicitudController struct {
 	beego.Controller
@@ -174,7 +176,7 @@ func (c *SolicitudController) PruebaDocumento() {
 func (c *SolicitudController) Post() {
 	var req models.CambioEstadoSolicitudRequest
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
-		c.CustomAbort(400, "JSON inválido: "+err.Error())
+		c.CustomAbort(400, invalidJSONMessage+err.Error())
 		return
 	}
 
@@ -349,7 +351,7 @@ func (c *SolicitudController) Put() {
 
 	var req models.EditarSolicitud
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
-		c.CustomAbort(400, "JSON inválido: "+err.Error())
+		c.CustomAbort(400, invalidJSONMessage+err.Error())
 		return
 	}
 
@@ -391,7 +393,7 @@ func (c *SolicitudController) PostEstados() {
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &body); err != nil {
-		c.CustomAbort(400, "JSON inválido: "+err.Error())
+		c.CustomAbort(400, invalidJSONMessage+err.Error())
 		return
 	}
 
@@ -486,7 +488,7 @@ func (c *SolicitudController) CancelarSolicitud() {
 func (c *SolicitudController) ActualizarEstadoDocumento() {
 	var req models.ActualizarEstadoDocumentoSolicitudRequest
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
-		c.CustomAbort(400, "JSON invalido: "+err.Error())
+		c.CustomAbort(400, invalidJSONMessage+err.Error())
 		return
 	}
 
@@ -516,7 +518,7 @@ func (c *SolicitudController) ActualizarEstadoDocumento() {
 func (c *SolicitudController) ActualizarEstadosDocumento() {
 	var req models.ActualizarEstadosDocumentoSolicitudRequest
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
-		c.CustomAbort(400, "JSON invalido: "+err.Error())
+		c.CustomAbort(400, invalidJSONMessage+err.Error())
 		return
 	}
 
