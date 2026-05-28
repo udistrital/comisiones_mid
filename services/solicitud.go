@@ -12,6 +12,8 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const solicitudNoEncontradaError = "no se encontró solicitud"
+
 func resolverTipoSolicitudId(tipoSolicitudId int, codigo string) (int, error) {
 	if tipoSolicitudId > 0 {
 		return tipoSolicitudId, nil
@@ -490,7 +492,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 	terceroId, err := obtenerTerceroIdPorIdentificacion(identificacion)
 	if err != nil {
 		return nil, map[string]interface{}{
-			"error":  "no se encontró solicitud",
+			"error":  solicitudNoEncontradaError,
 			"status": 404,
 		}
 	}
@@ -498,7 +500,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 	solicitudes, err := obtenerSolicitudesPorTercero(terceroId)
 	if err != nil || len(solicitudes) == 0 {
 		return nil, map[string]interface{}{
-			"error":  "no se encontró solicitud",
+			"error":  solicitudNoEncontradaError,
 			"status": 404,
 		}
 	}
@@ -516,7 +518,7 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 
 	if len(respuesta) == 0 {
 		return nil, map[string]interface{}{
-			"error":  "no se encontró solicitud",
+			"error":  solicitudNoEncontradaError,
 			"status": 404,
 		}
 	}
@@ -525,7 +527,6 @@ func BuscarSolicitudIdentificacion(identificacion int) (respuesta []models.Solic
 }
 
 func BuscarDetallesSolicitud(idSolicitud int) (respuesta models.SolicitudDetalles, outputError map[string]interface{}) {
-
 	defer func() {
 		if err := recover(); err != nil {
 			outputError = map[string]interface{}{
@@ -537,194 +538,18 @@ func BuscarDetallesSolicitud(idSolicitud int) (respuesta models.SolicitudDetalle
 		}
 	}()
 
-	var respuestaHistorico map[string]interface{}
-
-	err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+
-			"historico_estado_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud)+
-			",Activo:true&sortby=FechaCreacion&order=desc&limit=-1",
-		&respuestaHistorico,
-	)
-
-	if err != nil {
-		return respuesta, nil
+	primerRegistro, errMap := obtenerHistoricoSolicitudDetalle(idSolicitud)
+	if errMap != nil {
+		return respuesta, errMap
 	}
-	data, ok := respuestaHistorico["Data"].([]interface{})
-	if !ok || len(data) == 0 {
-		return models.SolicitudDetalles{}, map[string]interface{}{
-			"error":  "no se encontró solicitud",
-			"status": 404,
-		}
-	}
-
-	primerRegistro, ok := data[0].(map[string]interface{})
-	if !ok {
+	if primerRegistro == nil {
 		return respuesta, nil
 	}
 
-	infoSolicitud, ok := primerRegistro["SolicitudId"].(map[string]interface{})
-	if !ok {
-		return respuesta, nil
-	}
-
-	if registroTipoSolicitud, ok := infoSolicitud["TipoSolicitudId"].(map[string]interface{}); ok {
-		tipoSolicitudHistorico := models.TipoSolicitud{
-			Id:                int(registroTipoSolicitud["Id"].(float64)),
-			Nombre:            fmt.Sprintf("%v", registroTipoSolicitud["Nombre"]),
-			CodigoAbreviacion: fmt.Sprintf("%v", registroTipoSolicitud["CodigoAbreviacion"]),
-		}
-
-		if estadoSolicitudActual, ok := primerRegistro["EstadoSolicitudId"].(map[string]interface{}); ok {
-			estadoSolicitudInfo := models.EstadoSolicitud{
-				Id:                int(estadoSolicitudActual["Id"].(float64)),
-				Nombre:            fmt.Sprintf("%v", estadoSolicitudActual["Nombre"]),
-				Descripcion:       fmt.Sprintf("%v", estadoSolicitudActual["Descripcion"]),
-				CodigoAbreviacion: fmt.Sprintf("%v", estadoSolicitudActual["CodigoAbreviacion"]),
-			}
-			respuesta.EstadoSolicitud = &estadoSolicitudInfo
-		}
-
-		solicitudHistorico := models.Solicitud{
-			Id:                int(infoSolicitud["Id"].(float64)),
-			TerceroId:         int(infoSolicitud["TerceroId"].(float64)),
-			TipoSolicitudId:   &tipoSolicitudHistorico,
-			ObservacionCierre: fmt.Sprintf("%v", infoSolicitud["ObservacionCierre"]),
-			Activo:            infoSolicitud["Activo"].(bool),
-		}
-		respuesta.Solicitud = &solicitudHistorico
-	}
-
-	var respuestaDetalleFormulario map[string]interface{}
-	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud),
-		&respuestaDetalleFormulario,
-	); err == nil {
-
-		if data_formulario, ok := respuestaDetalleFormulario["Data"].([]interface{}); ok && len(data_formulario) > 0 {
-			if registro_formulario, ok := data_formulario[0].(map[string]interface{}); ok {
-				respuesta.Formulario = registro_formulario["Formulario"]
-			}
-		}
-	}
-
-	var respuestaDocumentos map[string]interface{}
-
-	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud)+",Activo:true&limit=-1",
-		&respuestaDocumentos,
-	); err == nil {
-
-		if data_documentos, ok := respuestaDocumentos["Data"].([]interface{}); ok && len(data_documentos) > 0 {
-			for _, doc := range data_documentos {
-				if documento, ok := doc.(map[string]interface{}); ok {
-					idDocumentoComision := int(documento["Id"].(float64))
-					var rolDocumentoComision string
-					if hist, ok := documento["HistoricoEstadoSolicitudId"].(map[string]interface{}); ok {
-						if rol, ok := hist["RolUsuario"].(string); ok {
-							rolDocumentoComision = rol
-						}
-					}
-					docId := int(documento["DocumentoId"].(float64))
-					var detalleDoc map[string]interface{}
-					if err := request.GetJson(
-						beego.AppConfig.String("UrlDocumentos")+"documento/"+fmt.Sprintf("%d", docId),
-						&detalleDoc,
-					); err == nil {
-
-						if len(detalleDoc) == 0 {
-							continue
-						}
-						idDocumento := int(detalleDoc["Id"].(float64))
-						nombre, _ := detalleDoc["Nombre"].(string)
-						enlace, _ := detalleDoc["Enlace"].(string)
-
-						// TipoDocumento
-						var tipo *models.TipoDocumentoSolicitud
-						if tipoDoc, ok := documento["TipoDocumentoId"].(map[string]interface{}); ok {
-							tipo = &models.TipoDocumentoSolicitud{
-								Id:                int(tipoDoc["Id"].(float64)),
-								Nombre:            fmt.Sprintf("%v", tipoDoc["Nombre"]),
-								Descripcion:       fmt.Sprintf("%v", tipoDoc["Descripcion"]),
-								CodigoAbreviacion: fmt.Sprintf("%v", tipoDoc["CodigoAbreviacion"]),
-							}
-						}
-
-						// EstadoDocumento
-						var estado *models.EstadoDocumento
-						if estadoDoc, ok := documento["EstadoDocumentoId"].(map[string]interface{}); ok {
-							estado = &models.EstadoDocumento{
-								Id:                int(estadoDoc["Id"].(float64)),
-								Nombre:            fmt.Sprintf("%v", estadoDoc["Nombre"]),
-								Descripcion:       fmt.Sprintf("%v", estadoDoc["Descripcion"]),
-								CodigoAbreviacion: fmt.Sprintf("%v", estadoDoc["CodigoAbreviacion"]),
-							}
-						}
-
-						if nombre != "" && enlace != "" {
-							documentoAux := models.DocumentoDetalle{
-								Id:          idDocumentoComision,
-								Rol:         rolDocumentoComision,
-								IdDocumento: idDocumento,
-								Nombre:      nombre,
-								Enlace:      enlace,
-								Tipo:        tipo,
-								Estado:      estado,
-							}
-
-							respuesta.Documentos = append(respuesta.Documentos, documentoAux)
-						}
-					}
-				}
-			}
-		} else {
-			respuesta.Documentos = []models.DocumentoDetalle{}
-		}
-	}
-
-	var respuestaObservaciones map[string]interface{}
-
-	if err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+
-			"observacion?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+
-			fmt.Sprintf("%d", idSolicitud)+",Activo:true&limit=-1",
-		&respuestaObservaciones,
-	); err == nil {
-
-		if data, ok := respuestaObservaciones["Data"].([]interface{}); ok && len(data) > 0 {
-
-			for _, item := range data {
-
-				observacionMap, ok := item.(map[string]interface{})
-				if !ok {
-					continue
-				}
-
-				var idObservacion int
-				if v, ok := observacionMap["Id"].(float64); ok {
-					idObservacion = int(v)
-				}
-
-				var rolObservacion string
-				if hist, ok := observacionMap["HistoricoEstadoSolicitudId"].(map[string]interface{}); ok {
-					if rol, ok := hist["RolUsuario"].(string); ok {
-						rolObservacion = rol
-					}
-				}
-
-				descripcion, _ := observacionMap["Descripcion"].(string)
-
-				observacionAux := models.ObservacionDetalle{
-					Id:          idObservacion,
-					Rol:         rolObservacion,
-					Descripcion: descripcion,
-				}
-
-				respuesta.Observaciones = append(respuesta.Observaciones, observacionAux)
-			}
-		} else {
-			respuesta.Observaciones = []models.ObservacionDetalle{}
-		}
-	}
+	construirCabeceraSolicitudDetalle(primerRegistro, &respuesta)
+	cargarFormularioSolicitudDetalle(idSolicitud, &respuesta)
+	cargarDocumentosSolicitudDetalle(idSolicitud, &respuesta)
+	cargarObservacionesSolicitudDetalle(idSolicitud, &respuesta)
 
 	return respuesta, nil
 }
@@ -836,6 +661,234 @@ func cargarEstadoActualSolicitud(idStr string, sol *models.SolicitudResumen) {
 	sol.EstadoSolicitud = &models.EstadoSolicitud{
 		Id:     extraerEstadoID(estado["Id"]),
 		Nombre: extraerStringMapa(estado, "Nombre"),
+	}
+}
+
+func obtenerHistoricoSolicitudDetalle(idSolicitud int) (map[string]interface{}, map[string]interface{}) {
+	var respuestaHistorico map[string]interface{}
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"historico_estado_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud)+
+			",Activo:true&sortby=FechaCreacion&order=desc&limit=-1",
+		&respuestaHistorico,
+	)
+	if err != nil {
+		return nil, nil
+	}
+
+	data, ok := respuestaHistorico["Data"].([]interface{})
+	if !ok || len(data) == 0 {
+		return nil, map[string]interface{}{
+			"error":  solicitudNoEncontradaError,
+			"status": 404,
+		}
+	}
+
+	primerRegistro, ok := data[0].(map[string]interface{})
+	if !ok {
+		return nil, nil
+	}
+
+	return primerRegistro, nil
+}
+
+func construirCabeceraSolicitudDetalle(primerRegistro map[string]interface{}, respuesta *models.SolicitudDetalles) {
+	infoSolicitud, ok := primerRegistro["SolicitudId"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	registroTipoSolicitud, ok := infoSolicitud["TipoSolicitudId"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	tipoSolicitudHistorico := models.TipoSolicitud{
+		Id:                int(registroTipoSolicitud["Id"].(float64)),
+		Nombre:            fmt.Sprintf("%v", registroTipoSolicitud["Nombre"]),
+		CodigoAbreviacion: fmt.Sprintf("%v", registroTipoSolicitud["CodigoAbreviacion"]),
+	}
+
+	if estadoSolicitudActual, ok := primerRegistro["EstadoSolicitudId"].(map[string]interface{}); ok {
+		estadoSolicitudInfo := models.EstadoSolicitud{
+			Id:                int(estadoSolicitudActual["Id"].(float64)),
+			Nombre:            fmt.Sprintf("%v", estadoSolicitudActual["Nombre"]),
+			Descripcion:       fmt.Sprintf("%v", estadoSolicitudActual["Descripcion"]),
+			CodigoAbreviacion: fmt.Sprintf("%v", estadoSolicitudActual["CodigoAbreviacion"]),
+		}
+		respuesta.EstadoSolicitud = &estadoSolicitudInfo
+	}
+
+	solicitudHistorico := models.Solicitud{
+		Id:                int(infoSolicitud["Id"].(float64)),
+		TerceroId:         int(infoSolicitud["TerceroId"].(float64)),
+		TipoSolicitudId:   &tipoSolicitudHistorico,
+		ObservacionCierre: fmt.Sprintf("%v", infoSolicitud["ObservacionCierre"]),
+		Activo:            infoSolicitud["Activo"].(bool),
+	}
+	respuesta.Solicitud = &solicitudHistorico
+}
+
+func cargarFormularioSolicitudDetalle(idSolicitud int, respuesta *models.SolicitudDetalles) {
+	var respuestaDetalleFormulario map[string]interface{}
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud?query=SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud),
+		&respuestaDetalleFormulario,
+	); err != nil {
+		return
+	}
+
+	dataFormulario, ok := respuestaDetalleFormulario["Data"].([]interface{})
+	if !ok || len(dataFormulario) == 0 {
+		return
+	}
+
+	registroFormulario, ok := dataFormulario[0].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	respuesta.Formulario = registroFormulario["Formulario"]
+}
+
+func cargarDocumentosSolicitudDetalle(idSolicitud int, respuesta *models.SolicitudDetalles) {
+	var respuestaDocumentos map[string]interface{}
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"documento_solicitud?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+fmt.Sprintf("%d", idSolicitud)+",Activo:true&limit=-1",
+		&respuestaDocumentos,
+	); err != nil {
+		return
+	}
+
+	dataDocumentos, ok := respuestaDocumentos["Data"].([]interface{})
+	if !ok || len(dataDocumentos) == 0 {
+		respuesta.Documentos = []models.DocumentoDetalle{}
+		return
+	}
+
+	for _, doc := range dataDocumentos {
+		documento, ok := doc.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		documentoAux, ok := construirDocumentoDetalle(documento)
+		if !ok {
+			continue
+		}
+
+		respuesta.Documentos = append(respuesta.Documentos, documentoAux)
+	}
+}
+
+func construirDocumentoDetalle(documento map[string]interface{}) (models.DocumentoDetalle, bool) {
+	idDocumentoComision := int(documento["Id"].(float64))
+	docId := int(documento["DocumentoId"].(float64))
+
+	rolDocumentoComision := ""
+	if hist, ok := documento["HistoricoEstadoSolicitudId"].(map[string]interface{}); ok {
+		if rol, ok := hist["RolUsuario"].(string); ok {
+			rolDocumentoComision = rol
+		}
+	}
+
+	var detalleDoc map[string]interface{}
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlDocumentos")+"documento/"+fmt.Sprintf("%d", docId),
+		&detalleDoc,
+	); err != nil {
+		return models.DocumentoDetalle{}, false
+	}
+
+	if len(detalleDoc) == 0 {
+		return models.DocumentoDetalle{}, false
+	}
+
+	idDocumento := int(detalleDoc["Id"].(float64))
+	nombre, _ := detalleDoc["Nombre"].(string)
+	enlace, _ := detalleDoc["Enlace"].(string)
+	if nombre == "" || enlace == "" {
+		return models.DocumentoDetalle{}, false
+	}
+
+	var tipo *models.TipoDocumentoSolicitud
+	if tipoDoc, ok := documento["TipoDocumentoId"].(map[string]interface{}); ok {
+		tipo = &models.TipoDocumentoSolicitud{
+			Id:                int(tipoDoc["Id"].(float64)),
+			Nombre:            fmt.Sprintf("%v", tipoDoc["Nombre"]),
+			Descripcion:       fmt.Sprintf("%v", tipoDoc["Descripcion"]),
+			CodigoAbreviacion: fmt.Sprintf("%v", tipoDoc["CodigoAbreviacion"]),
+		}
+	}
+
+	var estado *models.EstadoDocumento
+	if estadoDoc, ok := documento["EstadoDocumentoId"].(map[string]interface{}); ok {
+		estado = &models.EstadoDocumento{
+			Id:                int(estadoDoc["Id"].(float64)),
+			Nombre:            fmt.Sprintf("%v", estadoDoc["Nombre"]),
+			Descripcion:       fmt.Sprintf("%v", estadoDoc["Descripcion"]),
+			CodigoAbreviacion: fmt.Sprintf("%v", estadoDoc["CodigoAbreviacion"]),
+		}
+	}
+
+	return models.DocumentoDetalle{
+		Id:          idDocumentoComision,
+		Rol:         rolDocumentoComision,
+		IdDocumento: idDocumento,
+		Nombre:      nombre,
+		Enlace:      enlace,
+		Tipo:        tipo,
+		Estado:      estado,
+	}, true
+}
+
+func cargarObservacionesSolicitudDetalle(idSolicitud int, respuesta *models.SolicitudDetalles) {
+	var respuestaObservaciones map[string]interface{}
+	if err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"observacion?query=HistoricoEstadoSolicitudId__SolicitudId__Id:"+
+			fmt.Sprintf("%d", idSolicitud)+",Activo:true&limit=-1",
+		&respuestaObservaciones,
+	); err != nil {
+		return
+	}
+
+	data, ok := respuestaObservaciones["Data"].([]interface{})
+	if !ok || len(data) == 0 {
+		respuesta.Observaciones = []models.ObservacionDetalle{}
+		return
+	}
+
+	for _, item := range data {
+		observacionMap, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		respuesta.Observaciones = append(respuesta.Observaciones, construirObservacionDetalle(observacionMap))
+	}
+}
+
+func construirObservacionDetalle(observacionMap map[string]interface{}) models.ObservacionDetalle {
+	var idObservacion int
+	if v, ok := observacionMap["Id"].(float64); ok {
+		idObservacion = int(v)
+	}
+
+	rolObservacion := ""
+	if hist, ok := observacionMap["HistoricoEstadoSolicitudId"].(map[string]interface{}); ok {
+		if rol, ok := hist["RolUsuario"].(string); ok {
+			rolObservacion = rol
+		}
+	}
+
+	descripcion, _ := observacionMap["Descripcion"].(string)
+
+	return models.ObservacionDetalle{
+		Id:          idObservacion,
+		Rol:         rolObservacion,
+		Descripcion: descripcion,
 	}
 }
 
