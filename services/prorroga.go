@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -248,10 +249,6 @@ func CrearSolicitudProrroga(
 			)
 	}
 
-	// =========================
-	// CONSULTAR SOLICITUD BASE
-	// =========================
-
 	type TipoDocumentoTemp struct {
 		Id                int
 		CodigoAbreviacion string
@@ -305,6 +302,49 @@ func CrearSolicitudProrroga(
 	}
 
 	solicitudComision := responseSolicitud.Data[0]
+
+	// =========================
+	// CONSULTAR SOLICITUD BASE
+	// =========================
+
+	var responseDetalleSolicitud models.ResponseDetalleSolicitud
+
+	err = request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"detalle_solicitud?query=SolicitudId__Id:"+
+			fmt.Sprintf("%d", solicitudComision.Id),
+		&responseDetalleSolicitud,
+	)
+
+	if err != nil {
+		return models.CrearSolicitudProrrogaSalida{}, err
+	}
+
+	if !responseDetalleSolicitud.Success {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"error consultando detalle solicitud base: status %s",
+				responseDetalleSolicitud.Status,
+			)
+	}
+
+	if responseDetalleSolicitud.Status != "200" {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"respuesta inesperada consultando detalle solicitud base: %s",
+				responseDetalleSolicitud.Status,
+			)
+	}
+
+	if len(responseDetalleSolicitud.Data) != 1 {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"se esperaba 1 detalle solicitud base y llegaron %d",
+				len(responseDetalleSolicitud.Data),
+			)
+	}
+
+	detalleSolicitudBase := responseDetalleSolicitud.Data[0]
 
 	// =========================
 	// CONSULTAR TIPO SOLICITUD
@@ -559,6 +599,84 @@ func CrearSolicitudProrroga(
 	if respSolicitud.Data.Id == 0 {
 		return models.CrearSolicitudProrrogaSalida{},
 			fmt.Errorf("la solicitud creada no retornó id")
+	}
+
+	// =========================
+	// CREAR DETALLE SOLICITUD
+	// =========================
+
+	var formularioOriginal map[string]interface{}
+
+	err = json.Unmarshal(
+		[]byte(detalleSolicitudBase.Formulario),
+		&formularioOriginal,
+	)
+	if err != nil {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf("error parseando formulario: %v", err)
+	}
+	solicitante, ok := formularioOriginal["solicitante"].(map[string]interface{})
+	if !ok {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf("no se encontró la sección solicitante")
+	}
+
+	nuevoFormulario := map[string]interface{}{
+		"solicitante": map[string]interface{}{
+			"q2_facultad":                 solicitante["q2_facultad"],
+			"q3_nombres_apellidos":        solicitante["q3_nombres_apellidos"],
+			"q4_documento_identificacion": solicitante["q4_documento_identificacion"],
+		},
+		"formulario_completado": false,
+	}
+	nuevoFormularioBytes, err := json.Marshal(nuevoFormulario)
+	if err != nil {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf("error serializando formulario: %v", err)
+	}
+
+	detalleSolicitudProrroga := models.DetalleSolicitud{
+		SolicitudId: &models.Solicitud{
+			Id: respSolicitud.Data.Id,
+		},
+		Formulario: string(nuevoFormularioBytes),
+		Activo:     true,
+	}
+
+
+	var respDetalleSolicitud models.ResponseCreateDetalleSolicitud
+
+	err = request.SendJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"detalle_solicitud",
+		"POST",
+		&respDetalleSolicitud,
+		&detalleSolicitudProrroga,
+	)
+
+	if err != nil {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf("error creando detalle solicitud: %v", err)
+	}
+
+	if !respDetalleSolicitud.Success {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"el servicio respondió con status %s",
+				respDetalleSolicitud.Status,
+			)
+	}
+
+	if respDetalleSolicitud.Status != "201" {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf(
+				"respuesta inesperada creando detalle solicitud: %s",
+				respDetalleSolicitud.Status,
+			)
+	}
+
+	if respDetalleSolicitud.Data.Id == 0 {
+		return models.CrearSolicitudProrrogaSalida{},
+			fmt.Errorf("el detalle de solicitud creada no retornó id")
 	}
 
 	// =========================
