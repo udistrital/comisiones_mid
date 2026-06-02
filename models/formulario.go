@@ -33,19 +33,19 @@ type FormularioSolicitante struct {
 }
 
 type FormularioSolicitud struct {
-	Q13TipoEstudio                interface{}   `json:"q13_tipo_estudio"`
-	Q14NombrePrograma             string        `json:"q14_nombre_programa"`
-	Q15TituloAspira               string        `json:"q15_titulo_aspira"`
-	Q16Universidad                string        `json:"q16_universidad"`
-	Q17Pais                       string        `json:"q17_pais"`
-	Q18Ciudad                     string        `json:"q18_ciudad"`
-	Q19FechaAceptacion            string        `json:"q19_fecha_aceptacion"`
-	Q20NumSemestres               string        `json:"q20_num_semestres"`
-	Q22TipoApoyoRequerido         []interface{} `json:"q22_tipo_apoyo_requerido"`
-	Q23FechaInicioEstudios        string        `json:"q23_fecha_inicio_estudios"`
-	Q24FechaCulminacionEstudios   string        `json:"q24_fecha_culminacion_estudios"`
-	Q25TiempoRequeridoCulminacion string        `json:"q25_tiempo_requerido_culminacion"`
-	Q26CostoTotalRequerido        string        `json:"q26_costo_total_requerido"`
+	Q13TipoEstudio                interface{} `json:"q13_tipo_estudio"`
+	Q14NombrePrograma             string      `json:"q14_nombre_programa"`
+	Q15TituloAspira               string      `json:"q15_titulo_aspira"`
+	Q16Universidad                string      `json:"q16_universidad"`
+	Q17Pais                       string      `json:"q17_pais"`
+	Q18Ciudad                     string      `json:"q18_ciudad"`
+	Q19FechaAceptacion            string      `json:"q19_fecha_aceptacion"`
+	Q20NumSemestres               string      `json:"q20_num_semestres"`
+	Q22TipoApoyoRequerido         string      `json:"q22_tipo_apoyo_requerido"`
+	Q23FechaInicioEstudios        string      `json:"q23_fecha_inicio_estudios"`
+	Q24FechaCulminacionEstudios   string      `json:"q24_fecha_culminacion_estudios"`
+	Q25TiempoRequeridoCulminacion string      `json:"q25_tiempo_requerido_culminacion"`
+	Q26CostoTotalRequerido        string      `json:"q26_costo_total_requerido"`
 }
 
 type FormularioFinanciacionColombia struct {
