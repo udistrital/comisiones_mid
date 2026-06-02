@@ -643,7 +643,6 @@ func CrearSolicitudProrroga(
 		Activo:     true,
 	}
 
-
 	var respDetalleSolicitud models.ResponseCreateDetalleSolicitud
 
 	err = request.SendJson(
