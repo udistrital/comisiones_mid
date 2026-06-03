@@ -734,6 +734,7 @@ func construirCabeceraSolicitudDetalle(primerRegistro map[string]interface{}, re
 		ComisionId:        comision,
 		ObservacionCierre: fmt.Sprintf("%v", infoSolicitud["ObservacionCierre"]),
 		Activo:            infoSolicitud["Activo"].(bool),
+		FechaCreacion:     fmt.Sprintf("%v", infoSolicitud["FechaCreacion"]),
 	}
 
 	respuesta.Solicitud = &solicitudHistorico
