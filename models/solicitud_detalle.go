@@ -2,6 +2,7 @@ package models
 
 type SolicitudDetalles struct {
 	Solicitud       *Solicitud
+	Comision        *Comision
 	EstadoSolicitud *EstadoSolicitud
 	Formulario      interface{}
 	Observacion     string

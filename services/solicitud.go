@@ -720,14 +720,24 @@ func construirCabeceraSolicitudDetalle(primerRegistro map[string]interface{}, re
 		respuesta.EstadoSolicitud = &estadoSolicitudInfo
 	}
 
+	idSolicitud := int(infoSolicitud["Id"].(float64))
+
+	comision := construirComisionDesdeSolicitudMapa(infoSolicitud)
+	if comision == nil {
+		comision = obtenerComisionDesdeSolicitudCrud(idSolicitud)
+	}
+
 	solicitudHistorico := models.Solicitud{
-		Id:                int(infoSolicitud["Id"].(float64)),
+		Id:                idSolicitud,
 		TerceroId:         int(infoSolicitud["TerceroId"].(float64)),
 		TipoSolicitudId:   &tipoSolicitudHistorico,
+		ComisionId:        comision,
 		ObservacionCierre: fmt.Sprintf("%v", infoSolicitud["ObservacionCierre"]),
 		Activo:            infoSolicitud["Activo"].(bool),
 	}
+
 	respuesta.Solicitud = &solicitudHistorico
+	respuesta.Comision = comision
 }
 
 func cargarFormularioSolicitudDetalle(idSolicitud int, respuesta *models.SolicitudDetalles) {
@@ -909,4 +919,75 @@ func extraerStringMapa(data map[string]interface{}, key string) string {
 		return ""
 	}
 	return valor
+}
+
+func construirComisionDesdeSolicitudMapa(solicitud map[string]interface{}) *models.Comision {
+	if solicitud == nil {
+		return nil
+	}
+
+	registroComision, ok := solicitud["ComisionId"].(map[string]interface{})
+	if !ok || registroComision == nil {
+		return nil
+	}
+
+	return construirComisionDesdeMapa(registroComision)
+}
+
+func construirComisionDesdeMapa(data map[string]interface{}) *models.Comision {
+	if data == nil {
+		return nil
+	}
+
+	id := extraerEstadoID(data["Id"])
+	if id <= 0 {
+		return nil
+	}
+
+	comision := &models.Comision{
+		Id:                id,
+		Descripcion:       extraerStringFlexible(data["Descripcion"]),
+		FechaInicio:       extraerStringFlexible(data["FechaInicio"]),
+		FechaFinal:        extraerStringFlexible(data["FechaFinal"]),
+		FechaCreacion:     extraerStringFlexible(data["FechaCreacion"]),
+		FechaModificacion: extraerStringFlexible(data["FechaModificacion"]),
+	}
+
+	if activo, ok := data["Activo"].(bool); ok {
+		comision.Activo = activo
+	}
+
+	return comision
+}
+
+func obtenerComisionDesdeSolicitudCrud(idSolicitud int) *models.Comision {
+	var respuestaSolicitud map[string]interface{}
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"solicitud/"+fmt.Sprintf("%d", idSolicitud),
+		&respuestaSolicitud,
+	)
+	if err != nil {
+		return nil
+	}
+
+	data, ok := respuestaSolicitud["Data"].(map[string]interface{})
+	if !ok || data == nil {
+		return nil
+	}
+
+	return construirComisionDesdeSolicitudMapa(data)
+}
+
+func extraerStringFlexible(valor interface{}) string {
+	if valor == nil {
+		return ""
+	}
+
+	texto := fmt.Sprintf("%v", valor)
+	if texto == "<nil>" || texto == "null" {
+		return ""
+	}
+
+	return texto
 }
