@@ -160,6 +160,24 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
+		beego.ControllerComments{
+			Method:           "ValidarSolicitudCierre",
+			Router:           "/validar_solicitud_cierre/:id",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
+		beego.ControllerComments{
+			Method:           "ConsultarHistoricoSolicitudesCierre",
+			Router:           "/historico_solicitudes_cierre/:id",
+			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"],
 		beego.ControllerComments{
 			Method:           "Post",

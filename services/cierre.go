@@ -3,13 +3,248 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
 
+func ValidarPuedeCrearSolicitudCierre(comisionId int) (bool, string, error) {
+
+	// =========================
+	// CONSULTAR SOLICITUDES DE CIERRE
+	// =========================
+
+	var responseBusquedaSolicitudCierre models.ResponseListaSolicitud
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_CIERRE,ComisionId__Id:"+
+			fmt.Sprintf("%d", comisionId),
+		&responseBusquedaSolicitudCierre,
+	)
+
+	if err != nil {
+		return false, "", err
+	}
+
+	if !responseBusquedaSolicitudCierre.Success {
+		return false, "",
+			fmt.Errorf(
+				"error consultando solicitudes de cierre: status %s",
+				responseBusquedaSolicitudCierre.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudCierre.Status != "200" {
+		return false, "",
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitudes de cierre: %s",
+				responseBusquedaSolicitudCierre.Status,
+			)
+	}
+
+	// =========================
+	// SI NO HAY SOLICITUDES
+	// =========================
+
+	solicitudes := responseBusquedaSolicitudCierre.Data
+
+	if len(solicitudes) == 0 {
+		return true, "", nil
+	}
+
+	// =========================
+	// VALIDAR ÚLTIMO ESTADO
+	// =========================
+
+	for _, solicitud := range solicitudes {
+
+		var responseHistorico models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+
+				fmt.Sprintf("%d", solicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistorico,
+		)
+
+		if err != nil {
+			return false, "", err
+		}
+
+		if !responseHistorico.Success {
+			return false, "",
+				fmt.Errorf(
+					"error consultando histórico de solicitudes de cierre: status %s",
+					responseHistorico.Status,
+				)
+		}
+
+		if responseHistorico.Status != "200" {
+			return false, "",
+				fmt.Errorf(
+					"respuesta inesperada consultando histórico de solicitudes de cierre: %s",
+					responseHistorico.Status,
+				)
+		}
+
+		// SI NO TIENE HISTÓRICO CONTINÚA
+		if len(responseHistorico.Data) == 0 {
+			continue
+		}
+
+		estado := strings.TrimSpace(
+			strings.ToLower(
+				responseHistorico.Data[0].EstadoSolicitudId.Nombre,
+			),
+		)
+
+		// =========================
+		// SI NO ESTÁ RECHAZADA
+		// =========================
+
+		if estado != "no aprobada" {
+
+			return false,
+				responseHistorico.Data[0].EstadoSolicitudId.Nombre,
+				nil
+		}
+	}
+
+	// =========================
+	// TODAS ESTÁN RECHAZADAS
+	// =========================
+
+	return true, "", nil
+}
+
+func ConsultarHistoricoSolicitudesCierre(
+	comisionId int,
+) ([]models.HistoricoSolicitudCierre, error) {
+
+	// =========================
+	// CONSULTAR SOLICITUDES DE CIERRE
+	// =========================
+
+	var responseBusquedaSolicitudCierre models.ResponseListaSolicitud
+
+	err := request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_CIERRE,ComisionId__Id:"+
+			fmt.Sprintf("%d", comisionId),
+		&responseBusquedaSolicitudCierre,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !responseBusquedaSolicitudCierre.Success {
+		return nil,
+			fmt.Errorf(
+				"error consultando solicitudes de cierre: status %s",
+				responseBusquedaSolicitudCierre.Status,
+			)
+	}
+
+	if responseBusquedaSolicitudCierre.Status != "200" {
+		return nil,
+			fmt.Errorf(
+				"respuesta inesperada consultando solicitudes de cierre: %s",
+				responseBusquedaSolicitudCierre.Status,
+			)
+	}
+
+	// =========================
+	// ARMAR HISTÓRICO
+	// =========================
+
+	historicoSolicitudes := []models.HistoricoSolicitudCierre{}
+
+	for _, solicitud := range responseBusquedaSolicitudCierre.Data {
+
+		// =========================
+		// CONSULTAR ÚLTIMO HISTÓRICO
+		// =========================
+
+		var responseHistorico models.ResponseListaHistoricoEstadoSolicitud
+
+		err = request.GetJson(
+			beego.AppConfig.String("UrlComisionesCrud")+
+				"historico_estado_solicitud?query=solicitud_id:"+
+				fmt.Sprintf("%d", solicitud.Id)+
+				"&sortby=fecha_creacion&order=desc&limit=1",
+			&responseHistorico,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if !responseHistorico.Success {
+			return nil,
+				fmt.Errorf(
+					"error consultando histórico de solicitudes de cierre: status %s",
+					responseHistorico.Status,
+				)
+		}
+
+		if responseHistorico.Status != "200" {
+			return nil,
+				fmt.Errorf(
+					"respuesta inesperada consultando histórico de solicitudes de cierre: %s",
+					responseHistorico.Status,
+				)
+		}
+
+		// =========================
+		// SI NO TIENE HISTÓRICO
+		// =========================
+
+		if len(responseHistorico.Data) == 0 {
+			continue
+		}
+
+		ultimoHistorico := responseHistorico.Data[0]
+
+		// =========================
+		// AGREGAR A LISTA
+		// =========================
+
+		historicoSolicitudes = append(
+			historicoSolicitudes,
+			models.HistoricoSolicitudCierre{
+				SolicitudId:   solicitud.Id,
+				HistoricoId:   ultimoHistorico.Id,
+				FechaCreacion: ultimoHistorico.SolicitudId.FechaCreacion,
+				Estado:        ultimoHistorico.EstadoSolicitudId.Nombre,
+			},
+		)
+	}
+
+	return historicoSolicitudes, nil
+}
+
 func CrearSolicitudCierre(comisionCierre models.CrearSolicitudCierreEntrada) (cierre models.CrearSolicitudCierreSalida, err error) {
+
+	puedeCrear, estadoActual, err := ValidarPuedeCrearSolicitudCierre(
+		comisionCierre.ComisionId,
+	)
+
+	if err != nil {
+		return models.CrearSolicitudCierreSalida{}, err
+	}
+
+	if !puedeCrear {
+		return models.CrearSolicitudCierreSalida{},
+			fmt.Errorf(
+				"El maestro ya tiene una solicitud de cierre en estado %s",
+				estadoActual,
+			)
+	}
 
 	// =========================
 	// CONSULTAR SOLICITUD BASE

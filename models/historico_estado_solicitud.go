@@ -36,3 +36,17 @@ type ResponseHistoricoSolicitudProrroga struct {
 	Message string                       `json:"Message"`
 	Data    []HistoricoSolicitudProrroga `json:"Data"`
 }
+
+type HistoricoSolicitudCierre struct {
+	SolicitudId   int    `json:"solicitud_id"`
+	HistoricoId   int    `json:"historico_id"`
+	FechaCreacion string `json:"fecha_creacion"`
+	Estado        string `json:"estado"`
+}
+
+type ResponseHistoricoSolicitudCierre struct {
+	Success bool                       `json:"Success"`
+	Status  string                     `json:"Status"`
+	Message string                     `json:"Message"`
+	Data    []HistoricoSolicitudCierre `json:"Data"`
+}
