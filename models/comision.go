@@ -7,3 +7,4 @@ type Comision struct {
 	FechaCreacion     string `orm:"column(fecha_creacion);type(timestamp without time zone);null"`
 	FechaModificacion string `orm:"column(fecha_modificacion);type(timestamp without time zone);null"`
 }
+
