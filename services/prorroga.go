@@ -304,7 +304,7 @@ func CrearSolicitudProrroga(
 	solicitudComision := responseSolicitud.Data[0]
 
 	// =========================
-	// CONSULTAR SOLICITUD BASE
+	// CONSULTAR DETALLE SOLICITUD BASE
 	// =========================
 
 	var responseDetalleSolicitud models.ResponseDetalleSolicitud

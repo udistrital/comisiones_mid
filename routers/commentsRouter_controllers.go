@@ -151,6 +151,15 @@ func init() {
 			Filters:          nil,
 			Params:           nil})
 
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
+		beego.ControllerComments{
+			Method:           "CrearSolicitudCierre",
+			Router:           "/crear_solicitud_cierre",
+			AllowHTTPMethods: []string{"post"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:SolicitudController"],
 		beego.ControllerComments{
 			Method:           "Post",
