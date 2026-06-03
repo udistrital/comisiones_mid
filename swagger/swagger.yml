@@ -11,6 +11,26 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 basePath: /v1
 paths:
+  /comision/crear_solicitud_cierre:
+    post:
+      tags:
+      - comision
+      description: create Cierre
+      operationId: CierreController.Create
+      parameters:
+      - in: body
+        name: body
+        description: body for Cierre content
+        required: true
+        schema:
+          $ref: '#/definitions/models.Cierre'
+      responses:
+        "201":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.Cierre'
+        "403":
+          description: body is empty
   /comision/crear_solicitud_prorroga:
     post:
       tags:
@@ -31,6 +51,21 @@ paths:
             $ref: '#/definitions/models.Prorroga'
         "403":
           description: body is empty
+  /comision/historico_solicitudes_cierre/{id}:
+    get:
+      tags:
+      - comision
+      description: Consulta el histórico de solicitudes de cierre
+      operationId: CierreController.ConsultarHistoricoSolicitudesCierre
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/models.ResponseHistoricoSolicitudCierre'
+        "400":
+          description: id inválido
+        "500":
+          description: error interno
   /comision/historico_solicitudes_prorroga/{id}:
     get:
       tags:
@@ -42,6 +77,28 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/models.ResponseHistoricoSolicitudProrroga'
+        "400":
+          description: id inválido
+        "500":
+          description: error interno
+  /comision/validar_solicitud_cierre/{id}:
+    get:
+      tags:
+      - comision
+      description: valida si una comisión puede crear una nueva solicitud de cierre
+      operationId: CierreController.Validar Solicitud Cierre
+      parameters:
+      - in: path
+        name: id
+        description: Id comisión
+        required: true
+        type: integer
+        format: int64
+      responses:
+        "200":
+          description: ""
+          schema:
+            $ref: '#/definitions/map[string]interface{}'
         "400":
           description: id inválido
         "500":
@@ -689,6 +746,9 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/models.ActualizarEstadoDocumentoSolicitudRequest'
+  models.Cierre:
+    title: Cierre
+    type: object
   models.Comision:
     title: Comision
     type: object
@@ -739,6 +799,20 @@ definitions:
         type: string
       rol:
         type: string
+  models.HistoricoSolicitudCierre:
+    title: HistoricoSolicitudCierre
+    type: object
+    properties:
+      estado:
+        type: string
+      fecha_creacion:
+        type: string
+      historico_id:
+        type: integer
+        format: int64
+      solicitud_id:
+        type: integer
+        format: int64
   models.HistoricoSolicitudProrroga:
     title: HistoricoSolicitudProrroga
     type: object
@@ -756,6 +830,20 @@ definitions:
   models.Prorroga:
     title: Prorroga
     type: object
+  models.ResponseHistoricoSolicitudCierre:
+    title: ResponseHistoricoSolicitudCierre
+    type: object
+    properties:
+      Data:
+        type: array
+        items:
+          $ref: '#/definitions/models.HistoricoSolicitudCierre'
+      Message:
+        type: string
+      Status:
+        type: string
+      Success:
+        type: boolean
   models.ResponseHistoricoSolicitudProrroga:
     title: ResponseHistoricoSolicitudProrroga
     type: object
@@ -828,4 +916,4 @@ tags:
     Todos los endpoints estan bajo el namespace /v1/seguimiento.
 - name: comision
   description: |
-    ProrrogaController operations for Prorroga
+    ProrrogaController operations for Cierre

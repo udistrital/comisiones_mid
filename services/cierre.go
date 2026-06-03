@@ -6,43 +6,42 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
-	"github.com/udistrital/comisiones_mid/helpers"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
 
-func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
+func ValidarPuedeCrearSolicitudCierre(comisionId int) (bool, string, error) {
 
 	// =========================
-	// CONSULTAR SOLICITUDES DE PRÓRROGA
+	// CONSULTAR SOLICITUDES DE CIERRE
 	// =========================
 
-	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
+	var responseBusquedaSolicitudCierre models.ResponseListaSolicitud
 
 	err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_CIERRE,ComisionId__Id:"+
 			fmt.Sprintf("%d", comisionId),
-		&responseBusquedaSolicitudProrroga,
+		&responseBusquedaSolicitudCierre,
 	)
 
 	if err != nil {
 		return false, "", err
 	}
 
-	if !responseBusquedaSolicitudProrroga.Success {
+	if !responseBusquedaSolicitudCierre.Success {
 		return false, "",
 			fmt.Errorf(
-				"error consultando solicitudes de prórroga: status %s",
-				responseBusquedaSolicitudProrroga.Status,
+				"error consultando solicitudes de cierre: status %s",
+				responseBusquedaSolicitudCierre.Status,
 			)
 	}
 
-	if responseBusquedaSolicitudProrroga.Status != "200" {
+	if responseBusquedaSolicitudCierre.Status != "200" {
 		return false, "",
 			fmt.Errorf(
-				"respuesta inesperada consultando solicitudes de prórroga: %s",
-				responseBusquedaSolicitudProrroga.Status,
+				"respuesta inesperada consultando solicitudes de cierre: %s",
+				responseBusquedaSolicitudCierre.Status,
 			)
 	}
 
@@ -50,7 +49,7 @@ func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
 	// SI NO HAY SOLICITUDES
 	// =========================
 
-	solicitudes := responseBusquedaSolicitudProrroga.Data
+	solicitudes := responseBusquedaSolicitudCierre.Data
 
 	if len(solicitudes) == 0 {
 		return true, "", nil
@@ -79,7 +78,7 @@ func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
 		if !responseHistorico.Success {
 			return false, "",
 				fmt.Errorf(
-					"error consultando histórico de solicitudes de prórroga: status %s",
+					"error consultando histórico de solicitudes de cierre: status %s",
 					responseHistorico.Status,
 				)
 		}
@@ -87,7 +86,7 @@ func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
 		if responseHistorico.Status != "200" {
 			return false, "",
 				fmt.Errorf(
-					"respuesta inesperada consultando histórico de solicitudes de prórroga: %s",
+					"respuesta inesperada consultando histórico de solicitudes de cierre: %s",
 					responseHistorico.Status,
 				)
 		}
@@ -122,40 +121,40 @@ func ValidarPuedeCrearSolicitudProrroga(comisionId int) (bool, string, error) {
 	return true, "", nil
 }
 
-func ConsultarHistoricoSolicitudesProrroga(
+func ConsultarHistoricoSolicitudesCierre(
 	comisionId int,
-) ([]models.HistoricoSolicitudProrroga, error) {
+) ([]models.HistoricoSolicitudCierre, error) {
 
 	// =========================
-	// CONSULTAR SOLICITUDES DE PRÓRROGA
+	// CONSULTAR SOLICITUDES DE CIERRE
 	// =========================
 
-	var responseBusquedaSolicitudProrroga models.ResponseListaSolicitud
+	var responseBusquedaSolicitudCierre models.ResponseListaSolicitud
 
 	err := request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_PRORROGA,ComisionId__Id:"+
+			"solicitud?query=TipoSolicitudId__CodigoAbreviacion:SOL_CIERRE,ComisionId__Id:"+
 			fmt.Sprintf("%d", comisionId),
-		&responseBusquedaSolicitudProrroga,
+		&responseBusquedaSolicitudCierre,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if !responseBusquedaSolicitudProrroga.Success {
+	if !responseBusquedaSolicitudCierre.Success {
 		return nil,
 			fmt.Errorf(
-				"error consultando solicitudes de prórroga: status %s",
-				responseBusquedaSolicitudProrroga.Status,
+				"error consultando solicitudes de cierre: status %s",
+				responseBusquedaSolicitudCierre.Status,
 			)
 	}
 
-	if responseBusquedaSolicitudProrroga.Status != "200" {
+	if responseBusquedaSolicitudCierre.Status != "200" {
 		return nil,
 			fmt.Errorf(
-				"respuesta inesperada consultando solicitudes de prórroga: %s",
-				responseBusquedaSolicitudProrroga.Status,
+				"respuesta inesperada consultando solicitudes de cierre: %s",
+				responseBusquedaSolicitudCierre.Status,
 			)
 	}
 
@@ -163,9 +162,9 @@ func ConsultarHistoricoSolicitudesProrroga(
 	// ARMAR HISTÓRICO
 	// =========================
 
-	historicoSolicitudes := []models.HistoricoSolicitudProrroga{}
+	historicoSolicitudes := []models.HistoricoSolicitudCierre{}
 
-	for _, solicitud := range responseBusquedaSolicitudProrroga.Data {
+	for _, solicitud := range responseBusquedaSolicitudCierre.Data {
 
 		// =========================
 		// CONSULTAR ÚLTIMO HISTÓRICO
@@ -188,7 +187,7 @@ func ConsultarHistoricoSolicitudesProrroga(
 		if !responseHistorico.Success {
 			return nil,
 				fmt.Errorf(
-					"error consultando histórico de solicitudes de prórroga: status %s",
+					"error consultando histórico de solicitudes de cierre: status %s",
 					responseHistorico.Status,
 				)
 		}
@@ -196,7 +195,7 @@ func ConsultarHistoricoSolicitudesProrroga(
 		if responseHistorico.Status != "200" {
 			return nil,
 				fmt.Errorf(
-					"respuesta inesperada consultando histórico de solicitudes de prórroga: %s",
+					"respuesta inesperada consultando histórico de solicitudes de cierre: %s",
 					responseHistorico.Status,
 				)
 		}
@@ -217,7 +216,7 @@ func ConsultarHistoricoSolicitudesProrroga(
 
 		historicoSolicitudes = append(
 			historicoSolicitudes,
-			models.HistoricoSolicitudProrroga{
+			models.HistoricoSolicitudCierre{
 				SolicitudId:   solicitud.Id,
 				HistoricoId:   ultimoHistorico.Id,
 				FechaCreacion: ultimoHistorico.SolicitudId.FechaCreacion,
@@ -229,34 +228,22 @@ func ConsultarHistoricoSolicitudesProrroga(
 	return historicoSolicitudes, nil
 }
 
-func CrearSolicitudProrroga(
-	solicitudProrroga models.CrearSolicitudProrrogaEntrada,
-) (prorroga models.CrearSolicitudProrrogaSalida, err error) {
+func CrearSolicitudCierre(comisionCierre models.CrearSolicitudCierreEntrada) (cierre models.CrearSolicitudCierreSalida, err error) {
 
-	puedeCrear, estadoActual, err := ValidarPuedeCrearSolicitudProrroga(
-		solicitudProrroga.ComisionId,
+	puedeCrear, estadoActual, err := ValidarPuedeCrearSolicitudCierre(
+		comisionCierre.ComisionId,
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
+		return models.CrearSolicitudCierreSalida{}, err
 	}
 
 	if !puedeCrear {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
-				"El maestro ya tiene una solicitud de prórroga en estado %s",
+				"El maestro ya tiene una solicitud de cierre en estado %s",
 				estadoActual,
 			)
-	}
-
-	type TipoDocumentoTemp struct {
-		Id                int
-		CodigoAbreviacion string
-	}
-
-	type DocumentoTemporal struct {
-		TipoDocumentoSolicitudId int
-		Documento                models.CrearDocumentoGestorDocumental
 	}
 
 	// =========================
@@ -268,17 +255,17 @@ func CrearSolicitudProrroga(
 	err = request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
 			"solicitud?query=ComisionId__Id:"+
-			fmt.Sprintf("%d", solicitudProrroga.ComisionId)+
+			fmt.Sprintf("%d", comisionCierre.ComisionId)+
 			",TipoSolicitudId__CodigoAbreviacion:SOL_INI",
 		&responseSolicitud,
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
+		return models.CrearSolicitudCierreSalida{}, err
 	}
 
 	if !responseSolicitud.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"error consultando solicitud base: status %s",
 				responseSolicitud.Status,
@@ -286,7 +273,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if responseSolicitud.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada consultando solicitud base: %s",
 				responseSolicitud.Status,
@@ -294,7 +281,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if len(responseSolicitud.Data) != 1 {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"se esperaba 1 solicitud y llegaron %d",
 				len(responseSolicitud.Data),
@@ -317,11 +304,11 @@ func CrearSolicitudProrroga(
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
+		return models.CrearSolicitudCierreSalida{}, err
 	}
 
 	if !responseDetalleSolicitud.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"error consultando detalle solicitud base: status %s",
 				responseDetalleSolicitud.Status,
@@ -329,7 +316,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if responseDetalleSolicitud.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada consultando detalle solicitud base: %s",
 				responseDetalleSolicitud.Status,
@@ -337,7 +324,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if len(responseDetalleSolicitud.Data) != 1 {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"se esperaba 1 detalle solicitud base y llegaron %d",
 				len(responseDetalleSolicitud.Data),
@@ -354,16 +341,16 @@ func CrearSolicitudProrroga(
 
 	err = request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"tipo_solicitud?query=CodigoAbreviacion:SOL_PRORROGA",
+			"tipo_solicitud?query=CodigoAbreviacion:SOL_CIERRE",
 		&responseTipo,
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
+		return models.CrearSolicitudCierreSalida{}, err
 	}
 
 	if !responseTipo.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"error consultando tipo solicitud: status %s",
 				responseTipo.Status,
@@ -371,7 +358,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if responseTipo.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada consultando tipo solicitud: %s",
 				responseTipo.Status,
@@ -379,7 +366,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if len(responseTipo.Data) != 1 {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"se esperaba 1 tipo de solicitud y llegaron %d",
 				len(responseTipo.Data),
@@ -389,48 +376,6 @@ func CrearSolicitudProrroga(
 	tipoSolicitud := responseTipo.Data[0]
 
 	// =========================
-	// CONSULTAR ESTADO DOCUMENTO SOLICITUD
-	// =========================
-
-	var responseEstadoDocumentoSolicitud models.ResponseListaEstadoDocumento
-
-	err = request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+
-			"estado_documento?query=CodigoAbreviacion:ENV_REV_SEC_GRAL",
-		&responseEstadoDocumentoSolicitud,
-	)
-
-	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
-	}
-
-	if !responseEstadoDocumentoSolicitud.Success {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf(
-				"error consultando estado documento: status %s",
-				responseEstadoDocumentoSolicitud.Status,
-			)
-	}
-
-	if responseEstadoDocumentoSolicitud.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf(
-				"respuesta inesperada consultando estado documento: %s",
-				responseEstadoDocumentoSolicitud.Status,
-			)
-	}
-
-	if len(responseEstadoDocumentoSolicitud.Data) != 1 {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf(
-				"se esperaba 1 tipo de estado documento y llegaron %d",
-				len(responseEstadoDocumentoSolicitud.Data),
-			)
-	}
-
-	estadoSolicitudDocumento := responseEstadoDocumentoSolicitud.Data[0]
-
-	// =========================
 	// CONSULTAR ESTADO SOLICITUD
 	// =========================
 
@@ -438,16 +383,16 @@ func CrearSolicitudProrroga(
 
 	err = request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"estado_solicitud?query=CodigoAbreviacion:REV_SEC_GRAL",
+			"estado_solicitud?query=CodigoAbreviacion:REV_DEC",
 		&responseEstado,
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
+		return models.CrearSolicitudCierreSalida{}, err
 	}
 
 	if !responseEstado.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"error consultando estado solicitud: status %s",
 				responseEstado.Status,
@@ -455,7 +400,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if responseEstado.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada consultando estado solicitud: %s",
 				responseEstado.Status,
@@ -463,7 +408,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if len(responseEstado.Data) != 1 {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"se esperaba 1 estado de solicitud y llegaron %d",
 				len(responseEstado.Data),
@@ -473,80 +418,6 @@ func CrearSolicitudProrroga(
 	estadoSolicitud := responseEstado.Data[0]
 
 	// =========================
-	// CONSULTAR TIPOS DOCUMENTO
-	// =========================
-
-	var responseTipoDocumentoSolicitud models.ResponseListaTipoDocumentoSolicitud
-
-	err = request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+
-			"tipo_documento_solicitud?limit=-1&query=CodigoAbreviacion__startswith:SOL_PRO",
-		&responseTipoDocumentoSolicitud,
-	)
-
-	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{}, err
-	}
-
-	if !responseTipoDocumentoSolicitud.Success {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf(
-				"error consultando tipos documento: status %s",
-				responseTipoDocumentoSolicitud.Status,
-			)
-	}
-
-	if responseTipoDocumentoSolicitud.Status != "200" {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf(
-				"respuesta inesperada consultando tipos documento: %s",
-				responseTipoDocumentoSolicitud.Status,
-			)
-	}
-
-	if len(responseTipoDocumentoSolicitud.Data) == 0 {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf("no se encontraron tipos de documento")
-	}
-
-	var tiposDocumento []TipoDocumentoTemp
-
-	for _, tipo := range responseTipoDocumentoSolicitud.Data {
-
-		tiposDocumento = append(
-			tiposDocumento,
-			TipoDocumentoTemp{
-				Id:                tipo.Id,
-				CodigoAbreviacion: tipo.CodigoAbreviacion,
-			},
-		)
-	}
-
-	// =========================
-	// VALIDAR DOCUMENTOS
-	// =========================
-
-	tiposDocumentoMap := make(map[string]bool)
-
-	for _, tipo := range tiposDocumento {
-		tiposDocumentoMap[tipo.CodigoAbreviacion] = true
-	}
-
-	var comprobacionDocumentos int
-
-	for _, doc := range solicitudProrroga.DocumentosSolicitudProrroga {
-
-		if tiposDocumentoMap[doc.CodigoAbreviacionDoc] {
-			comprobacionDocumentos++
-		}
-	}
-
-	if comprobacionDocumentos != len(tiposDocumento) {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf("los documentos enviados no coinciden con los requeridos")
-	}
-
-	// =========================
 	// CREAR SOLICITUD
 	// =========================
 
@@ -554,7 +425,7 @@ func CrearSolicitudProrroga(
 		TerceroId: solicitudComision.TerceroId,
 
 		ComisionId: &models.IdReference{
-			Id: solicitudProrroga.ComisionId,
+			Id: comisionCierre.ComisionId,
 		},
 
 		Activo: true,
@@ -563,7 +434,7 @@ func CrearSolicitudProrroga(
 			Id: tipoSolicitud.Id,
 		},
 
-		ObservacionCierre: solicitudProrroga.Observacion,
+		ObservacionCierre: comisionCierre.Observacion,
 	}
 
 	var respSolicitud models.ResponseCreateSolicitud
@@ -576,12 +447,12 @@ func CrearSolicitudProrroga(
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("error creando solicitud: %v", err)
 	}
 
 	if !respSolicitud.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"el servicio respondió con status %s",
 				respSolicitud.Status,
@@ -589,7 +460,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if respSolicitud.Status != "201" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada creando solicitud: %s",
 				respSolicitud.Status,
@@ -597,7 +468,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if respSolicitud.Data.Id == 0 {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("la solicitud creada no retornó id")
 	}
 
@@ -612,12 +483,12 @@ func CrearSolicitudProrroga(
 		&formularioOriginal,
 	)
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("error parseando formulario: %v", err)
 	}
 	solicitante, ok := formularioOriginal["solicitante"].(map[string]interface{})
 	if !ok {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("no se encontró la sección solicitante")
 	}
 
@@ -631,7 +502,7 @@ func CrearSolicitudProrroga(
 	}
 	nuevoFormularioBytes, err := json.Marshal(nuevoFormulario)
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("error serializando formulario: %v", err)
 	}
 
@@ -653,12 +524,12 @@ func CrearSolicitudProrroga(
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("error creando detalle solicitud: %v", err)
 	}
 
 	if !respDetalleSolicitud.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"el servicio respondió con status %s",
 				respDetalleSolicitud.Status,
@@ -666,7 +537,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if respDetalleSolicitud.Status != "201" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada creando detalle solicitud: %s",
 				respDetalleSolicitud.Status,
@@ -674,7 +545,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if respDetalleSolicitud.Data.Id == 0 {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("el detalle de solicitud creada no retornó id")
 	}
 
@@ -691,7 +562,7 @@ func CrearSolicitudProrroga(
 			Id: estadoSolicitud.Id,
 		},
 
-		RolUsuario: solicitudProrroga.CodigoAbreviacionRol,
+		RolUsuario: comisionCierre.CodigoAbreviacionRol,
 		TerceroId:  solicitudComision.TerceroId,
 		Activo:     true,
 	}
@@ -706,12 +577,12 @@ func CrearSolicitudProrroga(
 	)
 
 	if err != nil {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf("error creando historico: %v", err)
 	}
 
 	if !respHistorico.Success {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"el servicio de histórico respondió con status %s",
 				respHistorico.Status,
@@ -719,7 +590,7 @@ func CrearSolicitudProrroga(
 	}
 
 	if respHistorico.Status != "201" {
-		return models.CrearSolicitudProrrogaSalida{},
+		return models.CrearSolicitudCierreSalida{},
 			fmt.Errorf(
 				"respuesta inesperada creando histórico: %s",
 				respHistorico.Status,
@@ -727,109 +598,16 @@ func CrearSolicitudProrroga(
 	}
 
 	// =========================
-	// PREPARAR DOCUMENTOS
-	// =========================
-
-	var documentosTemporales []DocumentoTemporal
-
-	for _, documento := range solicitudProrroga.DocumentosSolicitudProrroga {
-
-		for _, tipo := range tiposDocumento {
-
-			if tipo.CodigoAbreviacion == documento.CodigoAbreviacionDoc {
-
-				documentosTemporales = append(
-					documentosTemporales,
-					DocumentoTemporal{
-						TipoDocumentoSolicitudId: tipo.Id,
-						Documento:                documento.DocumentoSolicitud,
-					},
-				)
-			}
-		}
-	}
-
-	// =========================
-	// CREAR DOCUMENTOS
-	// =========================
-
-	var documentosCreacionProrroga []models.CrearDocumentoGestorDocumental
-
-	for _, docTemp := range documentosTemporales {
-
-		documentosCreacionProrroga = append(
-			documentosCreacionProrroga,
-			docTemp.Documento,
-		)
-	}
-
-	documentosResponse, errDoc :=
-		helpers.CrearDocumento(documentosCreacionProrroga)
-
-	if errDoc != nil {
-		return models.CrearSolicitudProrrogaSalida{},
-			fmt.Errorf("error creando documentos")
-	}
-
-	// =========================
-	// VINCULAR DOCUMENTOS
-	// =========================
-
-	for i, doc := range documentosResponse {
-
-		idDoc := doc["id"].(int)
-
-		documentoSolicitud := models.DocumentoSolicitud{
-
-			DocumentoId: idDoc,
-
-			HistoricoEstadoSolicitudId: &models.HistoricoEstadoSolicitud{
-				Id: respHistorico.Data.Id,
-			},
-
-			TipoDocumentoId: &models.TipoDocumentoSolicitud{
-				Id: documentosTemporales[i].TipoDocumentoSolicitudId,
-			},
-
-			EstadoDocumentoId: &models.EstadoDocumento{
-				Id: estadoSolicitudDocumento.Id,
-			},
-
-			Activo: true,
-		}
-
-		var respDoc map[string]interface{}
-
-		err = request.SendJson(
-			beego.AppConfig.String("UrlComisionesCrud")+
-				"documento_solicitud",
-			"POST",
-			&respDoc,
-			&documentoSolicitud,
-		)
-
-		if err != nil {
-
-			return models.CrearSolicitudProrrogaSalida{},
-				fmt.Errorf(
-					"error vinculando documento %d: %v",
-					idDoc,
-					err,
-				)
-		}
-	}
-
-	// =========================
 	// RESPUESTA
 	// =========================
 
-	var salidaCreacionProrroga models.CrearSolicitudProrrogaSalida
+	var salidaCreacionCierre models.CrearSolicitudCierreSalida
 
-	salidaCreacionProrroga.ComisionId =
-		solicitudProrroga.ComisionId
+	salidaCreacionCierre.ComisionId =
+		comisionCierre.ComisionId
 
-	salidaCreacionProrroga.SolicitudProrrogaId =
+	salidaCreacionCierre.SolicitudCierreId =
 		respSolicitud.Data.Id
 
-	return salidaCreacionProrroga, nil
+	return salidaCreacionCierre, nil
 }
