@@ -509,7 +509,9 @@ func ProcesarAprobacionProrrogaDecanatura(baseCrud string, solicitudId int, req 
 	}
 
 	if !EsSolicitudProrroga(solicitudObj) {
-		return nil
+		if strings.TrimSpace(req.FechaFinal) == "" || strings.TrimSpace(req.FechaFinalAnterior) == "" {
+			return nil
+		}
 	}
 
 	if strings.TrimSpace(req.FechaFinal) == "" || strings.TrimSpace(req.FechaFinalAnterior) == "" {
@@ -533,7 +535,17 @@ func ProcesarAprobacionProrrogaDecanatura(baseCrud string, solicitudId int, req 
 }
 
 func ObtenerSolicitudPorId(baseCrud string, solicitudId int) (map[string]interface{}, error) {
-	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/solicitud/%d", solicitudId))
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/solicitud"))
+	if err != nil {
+		return nil, err
+	}
+
+	q := u.Query()
+	q.Set("query", fmt.Sprintf("Id:%d", solicitudId))
+	q.Set("limit", "1")
+	u.RawQuery = q.Encode()
+
+	getURL := u.String()
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return nil, err
 	}
@@ -660,12 +672,43 @@ func ActualizarFechaFinalComision(baseCrud string, comisionId int, fechaFinal st
 	}
 
 	comisionObj["Id"] = comisionId
-	comisionObj["FechaFinal"] = strings.TrimSpace(fechaFinal)
+	comisionObj["FechaInicio"] = normalizarTimestampComision(comisionObj["FechaInicio"])
+	comisionObj["FechaFinal"] = normalizarTimestampComision(fechaFinal)
+	delete(comisionObj, "FechaModificacion")
 
 	var putResp map[string]interface{}
 	if err := request.SendJson(getURL, "PUT", &putResp, comisionObj); err != nil {
 		return fmt.Errorf("error actualizando fecha_final de la comisión %d: %v", comisionId, err)
 	}
 
+	if success, ok := putResp["Success"].(bool); ok && !success {
+		return fmt.Errorf("el CRUD respondió Success=false actualizando comisión %d: %+v", comisionId, putResp)
+	}
+
 	return nil
+}
+
+func normalizarTimestampComision(valor interface{}) string {
+	fecha := strings.TrimSpace(fmt.Sprintf("%v", valor))
+
+	if fecha == "" || fecha == "<nil>" {
+		return ""
+	}
+
+	fecha = strings.Replace(fecha, "T", " ", 1)
+	fecha = strings.TrimSuffix(fecha, "Z")
+
+	if idx := strings.Index(fecha, " +"); idx > 0 {
+		fecha = fecha[:idx]
+	}
+
+	if idx := strings.Index(fecha, "."); idx > 0 {
+		fecha = fecha[:idx]
+	}
+
+	if len(fecha) == 10 {
+		return fecha + " 00:00:00"
+	}
+
+	return fecha
 }
