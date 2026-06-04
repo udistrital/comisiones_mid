@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -14,6 +15,9 @@ import (
 )
 
 const historicoEstadoSolicitudPath = "/historico_estado_solicitud/%d"
+const codigoTipoSolicitudProrroga = "SOL_PRORROGA"
+const codigoEstadoAprobadoDecanatura = "APROB_DEC"
+const campoFechaFinalizacionAnteriorComision = "fecha_finalizacion_anterior_comision"
 
 func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudRequest) (models.CambioEstadoSolicitudResponse, error) {
 	if solicitudId <= 0 {
@@ -144,6 +148,10 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		if len(documentoSolicitudIds) > 0 {
 			resp.DocumentoSolicitudId = documentoSolicitudIds[0]
 		}
+	}
+
+	if err := ProcesarAprobacionProrrogaDecanatura(baseCrud, solicitudId, req); err != nil {
+		return models.CambioEstadoSolicitudResponse{}, err
 	}
 
 	// Crear comisión solo si el código abreviación es APROB_EJEC
@@ -485,6 +493,162 @@ func ActivarHistorico(base string, historicoId int) error {
 	var putResp map[string]interface{}
 	if err := request.SendJson(getURL, "PUT", &putResp, obj); err != nil {
 		return fmt.Errorf("error reactivando histórico %d: %v", historicoId, err)
+	}
+
+	return nil
+}
+
+func ProcesarAprobacionProrrogaDecanatura(baseCrud string, solicitudId int, req models.CambioEstadoSolicitudRequest) error {
+	if !strings.EqualFold(strings.TrimSpace(req.NuevoEstado), codigoEstadoAprobadoDecanatura) {
+		return nil
+	}
+
+	solicitudObj, err := ObtenerSolicitudPorId(baseCrud, solicitudId)
+	if err != nil {
+		return err
+	}
+
+	if !EsSolicitudProrroga(solicitudObj) {
+		return nil
+	}
+
+	if strings.TrimSpace(req.FechaFinal) == "" || strings.TrimSpace(req.FechaFinalAnterior) == "" {
+		return fmt.Errorf("FechaFinal y FechaFinalAnterior son obligatorios para aprobar una solicitud de prórroga")
+	}
+
+	comisionId := ExtraerComisionIdDesdeSolicitud(solicitudObj)
+	if comisionId <= 0 {
+		return fmt.Errorf("la solicitud de prórroga %d no tiene comisión asociada", solicitudId)
+	}
+
+	if err := PersistirFechaFinalAnteriorEnDetalleSolicitud(baseCrud, solicitudId, req); err != nil {
+		return err
+	}
+
+	if err := ActualizarFechaFinalComision(baseCrud, comisionId, req.FechaFinal); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ObtenerSolicitudPorId(baseCrud string, solicitudId int) (map[string]interface{}, error) {
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/solicitud/%d", solicitudId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return nil, err
+	}
+
+	var resp map[string]interface{}
+	if err := request.GetJson(getURL, &resp); err != nil {
+		return nil, fmt.Errorf("error consultando solicitud %d: %v", solicitudId, err)
+	}
+
+	obj := helpers.UnwrapDataToMap(resp)
+	if obj == nil {
+		return nil, fmt.Errorf("respuesta inválida al consultar solicitud %d", solicitudId)
+	}
+
+	return obj, nil
+}
+
+func EsSolicitudProrroga(solicitudObj map[string]interface{}) bool {
+	tipoObj, ok := solicitudObj["TipoSolicitudId"].(map[string]interface{})
+	if !ok || tipoObj == nil {
+		return false
+	}
+
+	codigo := strings.TrimSpace(fmt.Sprintf("%v", tipoObj["CodigoAbreviacion"]))
+	return strings.EqualFold(codigo, codigoTipoSolicitudProrroga)
+}
+
+func PersistirFechaFinalAnteriorEnDetalleSolicitud(baseCrud string, solicitudId int, req models.CambioEstadoSolicitudRequest) error {
+	detalleId, detalleObj, err := obtenerDetalleSolicitudActivo(baseCrud, solicitudId)
+	if err != nil {
+		return err
+	}
+	if detalleObj == nil || detalleId <= 0 {
+		return fmt.Errorf("no se encontró detalle_solicitud activo para la solicitud %d", solicitudId)
+	}
+
+	formulario, err := NormalizarFormularioProrroga(req.Formulario, detalleObj["Formulario"])
+	if err != nil {
+		return err
+	}
+
+	formulario[campoFechaFinalizacionAnteriorComision] = strings.TrimSpace(req.FechaFinalAnterior)
+
+	formularioBytes, err := json.Marshal(formulario)
+	if err != nil {
+		return fmt.Errorf("error serializando formulario de prórroga: %v", err)
+	}
+
+	detalleObj["Formulario"] = string(formularioBytes)
+
+	putURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/detalle_solicitud/%d", detalleId))
+	if err := helpers.ValidateAbsoluteURL(putURL); err != nil {
+		return err
+	}
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(putURL, "PUT", &putResp, detalleObj); err != nil {
+		return fmt.Errorf("error actualizando detalle_solicitud %d con fecha final anterior: %v", detalleId, err)
+	}
+
+	return nil
+}
+
+func NormalizarFormularioProrroga(formularioPayload interface{}, formularioActual interface{}) (map[string]interface{}, error) {
+	origen := formularioPayload
+	if origen == nil {
+		origen = formularioActual
+	}
+
+	if origen == nil {
+		return map[string]interface{}{}, nil
+	}
+
+	switch formulario := origen.(type) {
+	case map[string]interface{}:
+		return formulario, nil
+
+	case string:
+		formulario = strings.TrimSpace(formulario)
+		if formulario == "" {
+			return map[string]interface{}{}, nil
+		}
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(formulario), &parsed); err != nil {
+			return nil, fmt.Errorf("error parseando formulario de detalle_solicitud: %v", err)
+		}
+		return parsed, nil
+
+	default:
+		return nil, fmt.Errorf("formato de Formulario no soportado: %T", origen)
+	}
+}
+
+func ActualizarFechaFinalComision(baseCrud string, comisionId int, fechaFinal string) error {
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/comision/%d", comisionId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return err
+	}
+
+	var getResp map[string]interface{}
+	if err := request.GetJson(getURL, &getResp); err != nil {
+		return fmt.Errorf("error consultando comisión %d: %v", comisionId, err)
+	}
+
+	comisionObj := helpers.UnwrapDataToMap(getResp)
+	if comisionObj == nil {
+		return fmt.Errorf("respuesta inválida al consultar comisión %d", comisionId)
+	}
+
+	comisionObj["FechaFinal"] = strings.TrimSpace(fechaFinal)
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(getURL, "PUT", &putResp, comisionObj); err != nil {
+		return fmt.Errorf("error actualizando fecha_final de la comisión %d: %v", comisionId, err)
 	}
 
 	return nil
