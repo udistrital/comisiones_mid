@@ -19,6 +19,8 @@ type CambioEstadoSolicitudRequest struct {
 	Documentos           []DocumentoCambioEstadoRequest `json:"Documentos,omitempty"`
 	FechaInicio          string                         `json:"FechaInicio,omitempty"`
 	FechaFinal           string                         `json:"FechaFinal,omitempty"`
+	FechaFinalAnterior   string                         `json:"FechaFinalAnterior,omitempty"`
+	Formulario           interface{}                    `json:"Formulario,omitempty"`
 	Facultad             int                            `json:"Facultad,omitempty"`
 }
 
