@@ -339,7 +339,7 @@ func obtenerDetalleSolicitudActivo(baseCrud string, solicitudId int) (int, map[s
 	}
 
 	q := u.Query()
-	q.Set("query", fmt.Sprintf("SolicitudId:%d,Activo:true", solicitudId))
+	q.Set("query", fmt.Sprintf("SolicitudId__Id:%d,Activo:true", solicitudId))
 	q.Set("sortby", "FechaCreacion")
 	q.Set("order", "desc")
 	q.Set("limit", "1")

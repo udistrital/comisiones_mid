@@ -16,7 +16,7 @@ import (
 
 const historicoEstadoSolicitudPath = "/historico_estado_solicitud/%d"
 const codigoTipoSolicitudProrroga = "SOL_PRORROGA"
-const codigoEstadoAprobadoDecanatura = "APROB_DEC"
+const codigoEstadoAprobadoDecanatura = "APROB_EJEC"
 const campoFechaFinalizacionAnteriorComision = "fecha_finalizacion_anterior_comision"
 
 func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudRequest) (models.CambioEstadoSolicitudResponse, error) {
