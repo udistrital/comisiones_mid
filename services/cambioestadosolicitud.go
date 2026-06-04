@@ -552,12 +552,21 @@ func ObtenerSolicitudPorId(baseCrud string, solicitudId int) (map[string]interfa
 }
 
 func EsSolicitudProrroga(solicitudObj map[string]interface{}) bool {
+	if solicitudObj == nil {
+		return false
+	}
+
 	tipoObj, ok := solicitudObj["TipoSolicitudId"].(map[string]interface{})
 	if !ok || tipoObj == nil {
 		return false
 	}
 
 	codigo := strings.TrimSpace(fmt.Sprintf("%v", tipoObj["CodigoAbreviacion"]))
+	if strings.EqualFold(codigo, codigoTipoSolicitudProrroga) {
+		return true
+	}
+
+	codigo = strings.TrimSpace(fmt.Sprintf("%v", tipoObj["codigo_abreviacion"]))
 	return strings.EqualFold(codigo, codigoTipoSolicitudProrroga)
 }
 
@@ -575,7 +584,13 @@ func PersistirFechaFinalAnteriorEnDetalleSolicitud(baseCrud string, solicitudId 
 		return err
 	}
 
-	formulario[campoFechaFinalizacionAnteriorComision] = strings.TrimSpace(req.FechaFinalAnterior)
+	solicitudFormulario, ok := formulario["solicitud"].(map[string]interface{})
+	if !ok || solicitudFormulario == nil {
+		solicitudFormulario = map[string]interface{}{}
+	}
+
+	solicitudFormulario[campoFechaFinalizacionAnteriorComision] = strings.TrimSpace(req.FechaFinalAnterior)
+	formulario["solicitud"] = solicitudFormulario
 
 	formularioBytes, err := json.Marshal(formulario)
 	if err != nil {
@@ -644,6 +659,7 @@ func ActualizarFechaFinalComision(baseCrud string, comisionId int, fechaFinal st
 		return fmt.Errorf("respuesta inválida al consultar comisión %d", comisionId)
 	}
 
+	comisionObj["Id"] = comisionId
 	comisionObj["FechaFinal"] = strings.TrimSpace(fechaFinal)
 
 	var putResp map[string]interface{}
