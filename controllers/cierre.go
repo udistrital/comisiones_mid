@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/astaxie/beego"
@@ -35,7 +34,6 @@ func (c *CierreController) URLMapping() {
 // @Failure 403 body is empty
 // @router /crear_solicitud_cierre [post]
 func (c *CierreController) CrearSolicitudCierre() {
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CrearSolicitudCierreEntrada
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
@@ -235,7 +233,6 @@ func (c *CierreController) ConsultarHistoricoSolicitudesCierre() {
 // @router /rechazar_cierre [post]
 func (c *CierreController) RechazarSolicitudCierre() {
 
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CierreAprobacionSolicitud
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
@@ -288,7 +285,6 @@ func (c *CierreController) RechazarSolicitudCierre() {
 // @router /aprobar_cierre [post]
 func (c *CierreController) AprobarSolicitudCierre() {
 
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CierreAprobacionSolicitud
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
