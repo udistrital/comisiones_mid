@@ -15,6 +15,29 @@
     },
     "basePath": "/v1",
     "paths": {
+        "/comision/aprobar_cierre": {
+            "post": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "Aprueba la solicitud de cierre",
+                "operationId": "CierreController.AprobarSolicitudCierre",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseAprobarSolicitudCierre"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido"
+                    },
+                    "500": {
+                        "description": "error interno"
+                    }
+                }
+            }
+        },
         "/comision/crear_solicitud_cierre": {
             "post": {
                 "tags": [
@@ -112,6 +135,29 @@
                         "description": "",
                         "schema": {
                             "$ref": "#/definitions/models.ResponseHistoricoSolicitudProrroga"
+                        }
+                    },
+                    "400": {
+                        "description": "id inválido"
+                    },
+                    "500": {
+                        "description": "error interno"
+                    }
+                }
+            }
+        },
+        "/comision/rechazar_cierre": {
+            "post": {
+                "tags": [
+                    "comision"
+                ],
+                "description": "Rechaza la solicitud de cierre",
+                "operationId": "CierreController.RechazarSolicitudCierre",
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/models.ResponseRechazarSolicitudCierre"
                         }
                     },
                     "400": {
@@ -1151,6 +1197,12 @@
                 "FechaCreacion": {
                     "type": "string"
                 },
+                "FechaFinal": {
+                    "type": "string"
+                },
+                "FechaInicio": {
+                    "type": "string"
+                },
                 "FechaModificacion": {
                     "type": "string"
                 },
@@ -1255,6 +1307,10 @@
             "title": "Prorroga",
             "type": "object"
         },
+        "models.ResponseAprobarSolicitudCierre": {
+            "title": "ResponseAprobarSolicitudCierre",
+            "type": "object"
+        },
         "models.ResponseHistoricoSolicitudCierre": {
             "title": "ResponseHistoricoSolicitudCierre",
             "type": "object",
@@ -1296,6 +1352,10 @@
                     "type": "boolean"
                 }
             }
+        },
+        "models.ResponseRechazarSolicitudCierre": {
+            "title": "ResponseRechazarSolicitudCierre",
+            "type": "object"
         },
         "models.Solicitud": {
             "title": "Solicitud",
