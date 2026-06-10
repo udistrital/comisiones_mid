@@ -21,6 +21,7 @@ func (c *CierreController) URLMapping() {
 	c.Mapping("ValidarSolicitudCierre", c.ValidarSolicitudCierre)
 	c.Mapping("ConsultarHistoricoSolicitudesCierre", c.ConsultarHistoricoSolicitudesCierre)
 	c.Mapping("RechazarSolicitudCierre", c.RechazarSolicitudCierre)
+	c.Mapping("AprobarSolicitudCierre", c.AprobarSolicitudCierre)
 }
 
 // Post ...
@@ -232,7 +233,7 @@ func (c *CierreController) ConsultarHistoricoSolicitudesCierre() {
 func (c *CierreController) RechazarSolicitudCierre() {
 
 	fmt.Println("ENTRA A CREAR CIERRE")
-	var v models.CierreSolicitud
+	var v models.CierreAprobacionSolicitud
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
 		c.Ctx.Output.SetStatus(400)
@@ -247,6 +248,59 @@ func (c *CierreController) RechazarSolicitudCierre() {
 	}
 
 	data, err := services.RechazarSolicitudCierre(v)
+
+	if err != nil {
+
+		c.Ctx.Output.SetStatus(500)
+
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error rechazando la solicitud de cierre",
+			"Error":   err.Error(),
+			"Data":    nil,
+		}
+
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": "Consulta exitosa",
+		"Data":    data,
+	}
+
+	c.ServeJSON()
+}
+
+// @Title AprobarSolicitudCierre
+// @Description Aprueba la solicitud de cierre
+// @Success 200 {object} models.ResponseAprobarSolicitudCierre
+// @Failure 400 id inválido
+// @Failure 500 error interno
+// @router /aprobar_cierre [post]
+func (c *CierreController) AprobarSolicitudCierre() {
+
+	fmt.Println("ENTRA A CREAR CIERRE")
+	var v models.CierreAprobacionSolicitud
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
+
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  400,
+			"Message": "JSON inválido",
+			"Data":    nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.AprobarSolicitudCierre(v)
 
 	if err != nil {
 
