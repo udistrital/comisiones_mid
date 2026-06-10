@@ -10,6 +10,9 @@ import (
 	"github.com/udistrital/comisiones_mid/services"
 )
 
+const consultaExitosa = "Consulta exitosa"
+const errJsonInvalido = "JSON inválido"
+
 // ProrrogaController operations for Cierre
 type CierreController struct {
 	beego.Controller
@@ -40,7 +43,7 @@ func (c *CierreController) CrearSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -63,7 +66,7 @@ func (c *CierreController) CrearSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -142,7 +145,7 @@ func (c *CierreController) ValidarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data": map[string]interface{}{
 			"puede_crear_cierre": puedeCrear,
 			"mensaje":            mensaje,
@@ -217,7 +220,7 @@ func (c *CierreController) ConsultarHistoricoSolicitudesCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 
@@ -240,7 +243,7 @@ func (c *CierreController) RechazarSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -270,7 +273,7 @@ func (c *CierreController) RechazarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 
@@ -293,7 +296,7 @@ func (c *CierreController) AprobarSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -323,7 +326,7 @@ func (c *CierreController) AprobarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 

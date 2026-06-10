@@ -10,6 +10,8 @@ import (
 	"github.com/udistrital/comisiones_mid/services"
 )
 
+const consultaExitosa2 = "Consulta exitosa"
+
 // ProrrogaController operations for Prorroga
 type ProrrogaController struct {
 	beego.Controller
@@ -61,7 +63,7 @@ func (c *ProrrogaController) CrearSolicitudProrroga() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa2,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -140,7 +142,7 @@ func (c *ProrrogaController) ValidarSolicitudProrroga() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa2,
 		"Data": map[string]interface{}{
 			"puede_crear_prorroga": puedeCrear,
 			"mensaje":              mensaje,
@@ -215,7 +217,7 @@ func (c *ProrrogaController) ConsultarHistoricoSolicitudesProrroga() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa2,
 		"Data":    data,
 	}
 
