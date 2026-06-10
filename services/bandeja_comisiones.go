@@ -16,7 +16,7 @@ import (
 const errorConfUrlCom = "no esta configurado UrlComisionesCrud"
 
 // ObtenerBandejaSecretariaGeneral retorna todas las comisiones activas con su estado actual.
-// Es el endpoint para la secretaria general/academica que ve todo el universo de comisiones.
+// Es el endpoint para la secretaria general/academica que ve totalmente el universo de comisiones.
 func ObtenerBandejaSecretariaGeneral() ([]models.ComisionBandeja, error) {
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
