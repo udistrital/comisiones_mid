@@ -13,22 +13,27 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const idObligatorioError = "numeroIdentificacion es obligatorio"
+const confUrlComCrudError = "no esta configurado UrlComisionesCrud"
+const confUrlJbpmError = "no esta configurado UrlJBPM"
+const solicitudesPendientesError = "no se pudieron consultar las solicitudes pendientes: %v"
+
 func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]models.SolicitudPendienteRevisor, error) {
 	if strings.TrimSpace(numeroIdentificacion) == "" {
-		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
+		return nil, fmt.Errorf(idObligatorioError)
 	}
 
 	// CRUD comisiones
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	logs.Info("UrlComisionesCrud=%q", baseCrud)
 	if baseCrud == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf(confUrlComCrudError)
 	}
 
 	urlCoordinador := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
 	logs.Info("UrlJBPM=%q", urlCoordinador)
 	if urlCoordinador == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlJBPM")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf(confUrlJbpmError)
 	}
 	urlCoordinador = strings.TrimRight(urlCoordinador, "/") + "/coordinador_usuario/"
 
@@ -40,7 +45,7 @@ func ObtenerSolicitudesPendientesCoordinador(numeroIdentificacion string) ([]mod
 	estadoPendiente := "REV_PROY"
 	solicitudes, err := consultarSolicitudesPorEstado(baseCrud, estadoPendiente)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudieron consultar las solicitudes pendientes: %v", err)
+		return nil, fmt.Errorf(solicitudesPendientesError, err)
 	}
 
 	resultado := make([]models.SolicitudPendienteRevisor, 0)
@@ -132,19 +137,19 @@ func obtenerProyectosCurricularesCoordinador(baseURL, numeroIdentificacion strin
 
 func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]models.SolicitudPendienteRevisor, error) {
 	if strings.TrimSpace(numeroIdentificacion) == "" {
-		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
+		return nil, fmt.Errorf(idObligatorioError)
 	}
 	// CRUD comisiones
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	logs.Info("UrlComisionesCrud=%q", baseCrud)
 	if baseCrud == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf(confUrlComCrudError)
 	}
 
 	urlSecretaria := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
 	logs.Info("UrlJBPM=%q", urlSecretaria)
 	if urlSecretaria == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlJBPM")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf(confUrlJbpmError)
 	}
 	urlSecretaria = strings.TrimRight(urlSecretaria, "/") + "/secretaria_academica/"
 
@@ -156,7 +161,7 @@ func ObtenerSolicitudesPendientesSecretaria(numeroIdentificacion string) ([]mode
 	estadoPendiente := "REV_SEC_ACAD"
 	solicitudes, err := consultarSolicitudesPorEstado(baseCrud, estadoPendiente)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudieron consultar las solicitudes pendientes: %v", err)
+		return nil, fmt.Errorf(solicitudesPendientesError, err)
 	}
 
 	resultado := make([]models.SolicitudPendienteRevisor, 0)
@@ -231,17 +236,17 @@ func obtenerDependenciaSecretaria(baseURL, numeroIdentificacion string) (string,
 
 func ObtenerSolicitudesPendientesDecano(numeroIdentificacion string) ([]models.SolicitudPendienteRevisor, error) {
 	if strings.TrimSpace(numeroIdentificacion) == "" {
-		return nil, fmt.Errorf("numeroIdentificacion es obligatorio")
+		return nil, fmt.Errorf(idObligatorioError)
 	}
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlComisionesCrud")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf(confUrlComCrudError)
 	}
 
 	urlDecano := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))
 	if urlDecano == "" {
-		return []models.SolicitudPendienteRevisor{}, fmt.Errorf("no esta configurado UrlJBPM")
+		return []models.SolicitudPendienteRevisor{}, fmt.Errorf(confUrlJbpmError)
 	}
 	urlDecano = strings.TrimRight(urlDecano, "/") + "/decano/"
 
@@ -253,7 +258,7 @@ func ObtenerSolicitudesPendientesDecano(numeroIdentificacion string) ([]models.S
 	estadoPendiente := "REV_DEC"
 	solicitudes, err := consultarSolicitudesPorEstado(baseCrud, estadoPendiente)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudieron consultar las solicitudes pendientes: %v", err)
+		return nil, fmt.Errorf(solicitudesPendientesError, err)
 	}
 
 	resultado := make([]models.SolicitudPendienteRevisor, 0)

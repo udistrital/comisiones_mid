@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -12,6 +13,11 @@ import (
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/utils_oas/request"
 )
+
+const historicoEstadoSolicitudPath = "/historico_estado_solicitud/%d"
+const codigoTipoSolicitudProrroga = "SOL_PRORROGA"
+const codigoEstadoAprobadoDecanatura = "APROB_EJEC"
+const campoFechaFinalizacionAnteriorComision = "fecha_finalizacion_anterior_comision"
 
 func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudRequest) (models.CambioEstadoSolicitudResponse, error) {
 	if solicitudId <= 0 {
@@ -142,6 +148,10 @@ func CambiarEstadoSolicitud(solicitudId int, req models.CambioEstadoSolicitudReq
 		if len(documentoSolicitudIds) > 0 {
 			resp.DocumentoSolicitudId = documentoSolicitudIds[0]
 		}
+	}
+
+	if err := ProcesarAprobacionProrrogaDecanatura(baseCrud, solicitudId, req); err != nil {
+		return models.CambioEstadoSolicitudResponse{}, err
 	}
 
 	// Crear comisión solo si el código abreviación es APROB_EJEC
@@ -386,7 +396,7 @@ func GetHistoricoActivoActual(base string, solicitudId int) (map[string]interfac
 }
 
 func DesActivarHistorico(base string, historicoId int) error {
-	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	getURL := helpers.JoinURL(base, fmt.Sprintf(historicoEstadoSolicitudPath, historicoId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
 	}
@@ -449,7 +459,7 @@ func EliminarObservacion(baseCrud string, observacionId int) error {
 }
 
 func EliminarHistorico(baseCrud string, historicoId int) error {
-	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	deleteURL := helpers.JoinURL(baseCrud, fmt.Sprintf(historicoEstadoSolicitudPath, historicoId))
 	if err := helpers.ValidateAbsoluteURL(deleteURL); err != nil {
 		return err
 	}
@@ -463,7 +473,7 @@ func EliminarHistorico(baseCrud string, historicoId int) error {
 }
 
 func ActivarHistorico(base string, historicoId int) error {
-	getURL := helpers.JoinURL(base, fmt.Sprintf("/historico_estado_solicitud/%d", historicoId))
+	getURL := helpers.JoinURL(base, fmt.Sprintf(historicoEstadoSolicitudPath, historicoId))
 	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
 		return err
 	}
@@ -486,4 +496,219 @@ func ActivarHistorico(base string, historicoId int) error {
 	}
 
 	return nil
+}
+
+func ProcesarAprobacionProrrogaDecanatura(baseCrud string, solicitudId int, req models.CambioEstadoSolicitudRequest) error {
+	if !strings.EqualFold(strings.TrimSpace(req.NuevoEstado), codigoEstadoAprobadoDecanatura) {
+		return nil
+	}
+
+	solicitudObj, err := ObtenerSolicitudPorId(baseCrud, solicitudId)
+	if err != nil {
+		return err
+	}
+
+	if !EsSolicitudProrroga(solicitudObj) {
+		if strings.TrimSpace(req.FechaFinal) == "" || strings.TrimSpace(req.FechaFinalAnterior) == "" {
+			return nil
+		}
+	}
+
+	if strings.TrimSpace(req.FechaFinal) == "" || strings.TrimSpace(req.FechaFinalAnterior) == "" {
+		return fmt.Errorf("FechaFinal y FechaFinalAnterior son obligatorios para aprobar una solicitud de prórroga")
+	}
+
+	comisionId := ExtraerComisionIdDesdeSolicitud(solicitudObj)
+	if comisionId <= 0 {
+		return fmt.Errorf("la solicitud de prórroga %d no tiene comisión asociada", solicitudId)
+	}
+
+	if err := PersistirFechaFinalAnteriorEnDetalleSolicitud(baseCrud, solicitudId, req); err != nil {
+		return err
+	}
+
+	if err := ActualizarFechaFinalComision(baseCrud, comisionId, req.FechaFinal); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ObtenerSolicitudPorId(baseCrud string, solicitudId int) (map[string]interface{}, error) {
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/solicitud"))
+	if err != nil {
+		return nil, err
+	}
+
+	q := u.Query()
+	q.Set("query", fmt.Sprintf("Id:%d", solicitudId))
+	q.Set("limit", "1")
+	u.RawQuery = q.Encode()
+
+	getURL := u.String()
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return nil, err
+	}
+
+	var resp map[string]interface{}
+	if err := request.GetJson(getURL, &resp); err != nil {
+		return nil, fmt.Errorf("error consultando solicitud %d: %v", solicitudId, err)
+	}
+
+	obj := helpers.UnwrapDataToMap(resp)
+	if obj == nil {
+		return nil, fmt.Errorf("respuesta inválida al consultar solicitud %d", solicitudId)
+	}
+
+	return obj, nil
+}
+
+func EsSolicitudProrroga(solicitudObj map[string]interface{}) bool {
+	if solicitudObj == nil {
+		return false
+	}
+
+	tipoObj, ok := solicitudObj["TipoSolicitudId"].(map[string]interface{})
+	if !ok || tipoObj == nil {
+		return false
+	}
+
+	codigo := strings.TrimSpace(fmt.Sprintf("%v", tipoObj["CodigoAbreviacion"]))
+	if strings.EqualFold(codigo, codigoTipoSolicitudProrroga) {
+		return true
+	}
+
+	codigo = strings.TrimSpace(fmt.Sprintf("%v", tipoObj["codigo_abreviacion"]))
+	return strings.EqualFold(codigo, codigoTipoSolicitudProrroga)
+}
+
+func PersistirFechaFinalAnteriorEnDetalleSolicitud(baseCrud string, solicitudId int, req models.CambioEstadoSolicitudRequest) error {
+	detalleId, detalleObj, err := obtenerDetalleSolicitudActivo(baseCrud, solicitudId)
+	if err != nil {
+		return err
+	}
+	if detalleObj == nil || detalleId <= 0 {
+		return fmt.Errorf("no se encontró detalle_solicitud activo para la solicitud %d", solicitudId)
+	}
+
+	formulario, err := NormalizarFormularioProrroga(req.Formulario, detalleObj["Formulario"])
+	if err != nil {
+		return err
+	}
+
+	solicitudFormulario, ok := formulario["solicitud"].(map[string]interface{})
+	if !ok || solicitudFormulario == nil {
+		solicitudFormulario = map[string]interface{}{}
+	}
+
+	solicitudFormulario[campoFechaFinalizacionAnteriorComision] = strings.TrimSpace(req.FechaFinalAnterior)
+	formulario["solicitud"] = solicitudFormulario
+
+	formularioBytes, err := json.Marshal(formulario)
+	if err != nil {
+		return fmt.Errorf("error serializando formulario de prórroga: %v", err)
+	}
+
+	detalleObj["Formulario"] = string(formularioBytes)
+
+	putURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/detalle_solicitud/%d", detalleId))
+	if err := helpers.ValidateAbsoluteURL(putURL); err != nil {
+		return err
+	}
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(putURL, "PUT", &putResp, detalleObj); err != nil {
+		return fmt.Errorf("error actualizando detalle_solicitud %d con fecha final anterior: %v", detalleId, err)
+	}
+
+	return nil
+}
+
+func NormalizarFormularioProrroga(formularioPayload interface{}, formularioActual interface{}) (map[string]interface{}, error) {
+	origen := formularioPayload
+	if origen == nil {
+		origen = formularioActual
+	}
+
+	if origen == nil {
+		return map[string]interface{}{}, nil
+	}
+
+	switch formulario := origen.(type) {
+	case map[string]interface{}:
+		return formulario, nil
+
+	case string:
+		formulario = strings.TrimSpace(formulario)
+		if formulario == "" {
+			return map[string]interface{}{}, nil
+		}
+
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(formulario), &parsed); err != nil {
+			return nil, fmt.Errorf("error parseando formulario de detalle_solicitud: %v", err)
+		}
+		return parsed, nil
+
+	default:
+		return nil, fmt.Errorf("formato de Formulario no soportado: %T", origen)
+	}
+}
+
+func ActualizarFechaFinalComision(baseCrud string, comisionId int, fechaFinal string) error {
+	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/comision/%d", comisionId))
+	if err := helpers.ValidateAbsoluteURL(getURL); err != nil {
+		return err
+	}
+
+	var getResp map[string]interface{}
+	if err := request.GetJson(getURL, &getResp); err != nil {
+		return fmt.Errorf("error consultando comisión %d: %v", comisionId, err)
+	}
+
+	comisionObj := helpers.UnwrapDataToMap(getResp)
+	if comisionObj == nil {
+		return fmt.Errorf("respuesta inválida al consultar comisión %d", comisionId)
+	}
+
+	comisionObj["Id"] = comisionId
+	comisionObj["FechaInicio"] = normalizarTimestampComision(comisionObj["FechaInicio"])
+	comisionObj["FechaFinal"] = normalizarTimestampComision(fechaFinal)
+	delete(comisionObj, "FechaModificacion")
+
+	var putResp map[string]interface{}
+	if err := request.SendJson(getURL, "PUT", &putResp, comisionObj); err != nil {
+		return fmt.Errorf("error actualizando fecha_final de la comisión %d: %v", comisionId, err)
+	}
+
+	if success, ok := putResp["Success"].(bool); ok && !success {
+		return fmt.Errorf("el CRUD respondió Success=false actualizando comisión %d: %+v", comisionId, putResp)
+	}
+
+	return nil
+}
+
+func normalizarTimestampComision(valor interface{}) string {
+	fecha := strings.TrimSpace(fmt.Sprintf("%v", valor))
+
+	if fecha == "" || fecha == "<nil>" {
+		return ""
+	}
+
+	fecha = strings.Replace(fecha, "T", " ", 1)
+	fecha = strings.TrimSuffix(fecha, "Z")
+
+	if idx := strings.Index(fecha, " +"); idx > 0 {
+		fecha = fecha[:idx]
+	}
+
+	if idx := strings.Index(fecha, "."); idx > 0 {
+		fecha = fecha[:idx]
+	}
+
+	if len(fecha) == 10 {
+		return fecha + " 00:00:00"
+	}
+
+	return fecha
 }

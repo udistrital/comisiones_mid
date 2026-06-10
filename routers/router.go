@@ -31,6 +31,7 @@ func init() {
 		beego.NSNamespace("/comision",
 			beego.NSInclude(
 				&controllers.ProrrogaController{},
+				&controllers.CierreController{},
 			),
 		),
 	)

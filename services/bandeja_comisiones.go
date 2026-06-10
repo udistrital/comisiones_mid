@@ -101,6 +101,8 @@ func obtenerTodasLasComisiones(baseCrud string) ([]models.ComisionBandeja, error
 
 	q := u.Query()
 	q.Set("query", "Activo:true")
+	q.Set("sortby", "Id")
+	q.Set("order", "desc")
 	q.Set("limit", "0")
 	u.RawQuery = q.Encode()
 

@@ -778,6 +778,27 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 
 				switch {
 
+				case strings.Contains(rawURL, "detalle_solicitud"):
+
+					*(target.(*models.ResponseDetalleSolicitud)) =
+						models.ResponseDetalleSolicitud{
+							Success: true,
+							Status:  "200",
+							Data: []models.DetalleSolicitud{
+								{
+									Formulario: `{
+										"solicitante": {
+											"q2_facultad": "Ingenieria",
+											"q3_nombres_apellidos": "Juan Perez",
+											"q4_documento_identificacion": "123456"
+										}
+									}`,
+								},
+							},
+						}
+
+					return nil
+
 				case strings.Contains(
 					rawURL,
 					"TipoSolicitudId__CodigoAbreviacion:SOL_INI",
@@ -895,6 +916,19 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 
 					return nil
 
+				case strings.Contains(rawURL, "detalle_solicitud"):
+
+					*(response.(*models.ResponseCreateDetalleSolicitud)) =
+						models.ResponseCreateDetalleSolicitud{
+							Success: true,
+							Status:  "201",
+							Data: models.Solicitud{
+								Id: 300,
+							},
+						}
+
+					return nil
+
 				case strings.Contains(
 					rawURL,
 					"documento_solicitud",
@@ -909,7 +943,8 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 
 				case strings.Contains(rawURL, "solicitud") &&
 					!strings.Contains(rawURL, "historico") &&
-					!strings.Contains(rawURL, "documento"):
+					!strings.Contains(rawURL, "documento") &&
+					!strings.Contains(rawURL, "detalle"):
 
 					*(response.(*models.ResponseCreateSolicitud)) =
 						models.ResponseCreateSolicitud{
@@ -923,7 +958,7 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 					return nil
 				}
 
-				return errors.New("url no esperada")
+				return errors.New("url no esperada: " + rawURL)
 			},
 		)
 
@@ -1082,6 +1117,27 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 
 				switch {
 
+				case strings.Contains(rawURL, "detalle_solicitud"):
+
+					*(target.(*models.ResponseDetalleSolicitud)) =
+						models.ResponseDetalleSolicitud{
+							Success: true,
+							Status:  "200",
+							Data: []models.DetalleSolicitud{
+								{
+									Formulario: `{
+										"solicitante": {
+											"q2_facultad": "Ingenieria",
+											"q3_nombres_apellidos": "Juan Perez",
+											"q4_documento_identificacion": "123456"
+										}
+									}`,
+								},
+							},
+						}
+
+					return nil
+
 				case strings.Contains(
 					rawURL,
 					"TipoSolicitudId__CodigoAbreviacion:SOL_INI",
@@ -1095,6 +1151,9 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 								{
 									Id:        1,
 									TerceroId: 999,
+									ComisionId: &models.Comision{
+										Id: 10,
+									},
 								},
 							},
 						}
@@ -1109,7 +1168,8 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 							Status:  "200",
 							Data: []models.TipoSolicitud{
 								{
-									Id: 2,
+									Id:                2,
+									CodigoAbreviacion: "SOL_PRORROGA",
 								},
 							},
 						}
@@ -1139,7 +1199,8 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 							Status:  "200",
 							Data: []models.EstadoSolicitud{
 								{
-									Id: 4,
+									Id:     4,
+									Nombre: "En revisión",
 								},
 							},
 						}
@@ -1163,7 +1224,7 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 					return nil
 				}
 
-				return nil
+				return errors.New("url no esperada: " + rawURL)
 			},
 		)
 
@@ -1218,6 +1279,27 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 
 				switch {
 
+				case strings.Contains(rawURL, "detalle_solicitud"):
+
+					*(target.(*models.ResponseDetalleSolicitud)) =
+						models.ResponseDetalleSolicitud{
+							Success: true,
+							Status:  "200",
+							Data: []models.DetalleSolicitud{
+								{
+									Formulario: `{
+										"solicitante": {
+											"q2_facultad": "Ingenieria",
+											"q3_nombres_apellidos": "Juan Perez",
+											"q4_documento_identificacion": "123456"
+										}
+									}`,
+								},
+							},
+						}
+
+					return nil
+
 				case strings.Contains(
 					rawURL,
 					"TipoSolicitudId__CodigoAbreviacion:SOL_INI",
@@ -1231,6 +1313,9 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 								{
 									Id:        1,
 									TerceroId: 999,
+									ComisionId: &models.Comision{
+										Id: 10,
+									},
 								},
 							},
 						}
@@ -1245,7 +1330,8 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 							Status:  "200",
 							Data: []models.TipoSolicitud{
 								{
-									Id: 2,
+									Id:                2,
+									CodigoAbreviacion: "SOL_PRORROGA",
 								},
 							},
 						}
@@ -1275,7 +1361,8 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 							Status:  "200",
 							Data: []models.EstadoSolicitud{
 								{
-									Id: 4,
+									Id:     4,
+									Nombre: "En revisión",
 								},
 							},
 						}
@@ -1299,7 +1386,7 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 					return nil
 				}
 
-				return nil
+				return errors.New("url no esperada: " + rawURL)
 			},
 		)
 
@@ -1313,6 +1400,19 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 			) error {
 
 				switch {
+
+				case strings.Contains(rawURL, "detalle_solicitud"):
+
+					*(response.(*models.ResponseCreateDetalleSolicitud)) =
+						models.ResponseCreateDetalleSolicitud{
+							Success: true,
+							Status:  "201",
+							Data: models.Solicitud{
+								Id: 150,
+							},
+						}
+
+					return nil
 
 				case strings.Contains(
 					rawURL,
@@ -1332,7 +1432,8 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 
 				case strings.Contains(rawURL, "solicitud") &&
 					!strings.Contains(rawURL, "historico") &&
-					!strings.Contains(rawURL, "documento"):
+					!strings.Contains(rawURL, "documento") &&
+					!strings.Contains(rawURL, "detalle"):
 
 					*(response.(*models.ResponseCreateSolicitud)) =
 						models.ResponseCreateSolicitud{
@@ -1346,7 +1447,7 @@ func TestCrearSolicitudProrroga(t *testing.T) {
 					return nil
 				}
 
-				return nil
+				return errors.New("url no esperada: " + rawURL)
 			},
 		)
 

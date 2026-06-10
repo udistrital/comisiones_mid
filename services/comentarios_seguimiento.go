@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/astaxie/beego"
@@ -30,7 +31,7 @@ func getHistoricoActivoComision(baseCrud string, comisionId int) (int, error) {
 
 	q := u.Query()
 	q.Set("query", fmt.Sprintf("ComisionId.Id:%d,Activo:true", comisionId))
-	q.Set("sortby", "FechaCreacion")
+	q.Set("sortby", "Id")
 	q.Set("order", "desc")
 	q.Set("limit", "1")
 	u.RawQuery = q.Encode()
@@ -59,7 +60,44 @@ func getHistoricoActivoComision(baseCrud string, comisionId int) (int, error) {
 	return id, nil
 }
 
+// getHistoricoIdsComision retorna todos los Id de historico_estado_comision
+// de la comision (activos e inactivos). Se usa para leer comentarios de toda
+// la vida de la comision, no solo del estado actual.
+func getHistoricoIdsComision(baseCrud string, comisionId int) ([]int, error) {
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/historico_estado_comision"))
+	if err != nil {
+		return nil, err
+	}
+
+	q := u.Query()
+	q.Set("query", fmt.Sprintf("ComisionId.Id:%d", comisionId))
+	q.Set("limit", "0")
+	u.RawQuery = q.Encode()
+
+	var envelope map[string]interface{}
+	if err := request.GetJson(u.String(), &envelope); err != nil {
+		return nil, fmt.Errorf("error consultando historico de comision %d: %v", comisionId, err)
+	}
+
+	raw, _ := envelope["Data"].([]interface{})
+	ids := make([]int, 0, len(raw))
+	for _, item := range raw {
+		row, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		idStr := fmt.Sprintf("%v", row["Id"])
+		var id int
+		if _, err2 := fmt.Sscanf(idStr, "%d", &id); err2 == nil && id > 0 {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
+}
+
 // ObtenerComentariosSeguimiento retorna los comentarios de un panel especifico de una comision.
+// Consulta TODOS los historico_estado_comision de la comision (no solo el activo) para que
+// el historial de comentarios no se pierda cuando el decano registra un cambio de estado.
 func ObtenerComentariosSeguimiento(comisionId int, codigoTipo string) ([]models.ComentarioSeguimiento, error) {
 	codigoTipo = strings.TrimSpace(codigoTipo)
 	if comisionId <= 0 {
@@ -79,56 +117,67 @@ func ObtenerComentariosSeguimiento(comisionId int, codigoTipo string) ([]models.
 		return nil, fmt.Errorf("tipo_seguimiento '%s' no encontrado: %v", codigoTipo, err)
 	}
 
-	historicoId, err := getHistoricoActivoComision(baseCrud, comisionId)
+	historicoIds, err := getHistoricoIdsComision(baseCrud, comisionId)
 	if err != nil {
 		return nil, err
 	}
-
-	u, err := url.Parse(helpers.JoinURL(baseCrud, "/seguimiento"))
-	if err != nil {
-		return nil, err
+	if len(historicoIds) == 0 {
+		return []models.ComentarioSeguimiento{}, nil
 	}
 
-	q := u.Query()
-	q.Set("query", fmt.Sprintf("HistoricoEstadoComisionId.Id:%d,TipoSeguimientoId.Id:%d,Activo:true", historicoId, tipoId))
-	q.Set("sortby", "FechaCreacion")
-	q.Set("order", "asc")
-	q.Set("limit", "0")
-	u.RawQuery = q.Encode()
+	resultado := make([]models.ComentarioSeguimiento, 0)
 
-	logs.Info("[ComentariosSeguimiento] GET %s", u.String())
-
-	var envelope map[string]interface{}
-	if err := request.GetJson(u.String(), &envelope); err != nil {
-		return nil, fmt.Errorf("error consultando seguimientos: %v", err)
-	}
-
-	rawData, _ := envelope["Data"].([]interface{})
-	resultado := make([]models.ComentarioSeguimiento, 0, len(rawData))
-
-	for _, item := range rawData {
-		row, ok := item.(map[string]interface{})
-		if !ok {
+	for _, historicoId := range historicoIds {
+		u, err := url.Parse(helpers.JoinURL(baseCrud, "/seguimiento"))
+		if err != nil {
 			continue
 		}
 
-		idFloat, _ := row["Id"].(float64)
-		fechaCreacion := fmt.Sprintf("%v", row["FechaCreacion"])
+		q := u.Query()
+		q.Set("query", fmt.Sprintf("HistoricoEstadoComisionId.Id:%d,TipoSeguimientoId.Id:%d,Activo:true", historicoId, tipoId))
+		q.Set("sortby", "FechaCreacion")
+		q.Set("order", "asc")
+		q.Set("limit", "0")
+		u.RawQuery = q.Encode()
 
-		var desc descripcionComentario
-		if descStr, ok := row["Descripcion"].(string); ok && descStr != "" {
-			if err := json.Unmarshal([]byte(descStr), &desc); err != nil {
-				logs.Warning("[ComentariosSeguimiento] no se pudo parsear Descripcion del seguimiento id=%v: %v", row["Id"], err)
-			}
+		logs.Info("[ComentariosSeguimiento] GET %s", u.String())
+
+		var envelope map[string]interface{}
+		if err := request.GetJson(u.String(), &envelope); err != nil {
+			logs.Warning("[ComentariosSeguimiento] error consultando historico %d: %v", historicoId, err)
+			continue
 		}
 
-		resultado = append(resultado, models.ComentarioSeguimiento{
-			Id:            int(idFloat),
-			Rol:           desc.Rol,
-			Texto:         desc.Texto,
-			FechaCreacion: fechaCreacion,
-		})
+		rawData, _ := envelope["Data"].([]interface{})
+		for _, item := range rawData {
+			row, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			idFloat, _ := row["Id"].(float64)
+			fechaCreacion := fmt.Sprintf("%v", row["FechaCreacion"])
+
+			var desc descripcionComentario
+			if descStr, ok := row["Descripcion"].(string); ok && descStr != "" {
+				if err := json.Unmarshal([]byte(descStr), &desc); err != nil {
+					logs.Warning("[ComentariosSeguimiento] no se pudo parsear Descripcion del seguimiento id=%v: %v", row["Id"], err)
+				}
+			}
+
+			resultado = append(resultado, models.ComentarioSeguimiento{
+				Id:            int(idFloat),
+				Rol:           desc.Rol,
+				Texto:         desc.Texto,
+				FechaCreacion: fechaCreacion,
+			})
+		}
 	}
+
+	// Ordenar globalmente por fecha (los historicos pueden estar en cualquier orden)
+	sort.Slice(resultado, func(i, j int) bool {
+		return resultado[i].FechaCreacion < resultado[j].FechaCreacion
+	})
 
 	return resultado, nil
 }
