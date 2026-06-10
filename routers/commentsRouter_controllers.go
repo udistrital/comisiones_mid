@@ -9,15 +9,6 @@ func init() {
 
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
 		beego.ControllerComments{
-			Method:           "CrearSolicitudCierre",
-			Router:           "/crear_solicitud_cierre",
-			AllowHTTPMethods: []string{"post"},
-			MethodParams:     param.Make(),
-			Filters:          nil,
-			Params:           nil})
-
-	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
-		beego.ControllerComments{
 			Method:           "AprobarSolicitudCierre",
 			Router:           "/aprobar_cierre",
 			AllowHTTPMethods: []string{"post"},
@@ -27,8 +18,8 @@ func init() {
 
 	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
 		beego.ControllerComments{
-			Method:           "RechazarSolicitudCierre",
-			Router:           "/rechazar_cierre",
+			Method:           "CrearSolicitudCierre",
+			Router:           "/crear_solicitud_cierre",
 			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
@@ -39,6 +30,15 @@ func init() {
 			Method:           "ConsultarHistoricoSolicitudesCierre",
 			Router:           "/historico_solicitudes_cierre/:id",
 			AllowHTTPMethods: []string{"get"},
+			MethodParams:     param.Make(),
+			Filters:          nil,
+			Params:           nil})
+
+	beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"] = append(beego.GlobalControllerRouter["github.com/udistrital/comisiones_mid/controllers:CierreController"],
+		beego.ControllerComments{
+			Method:           "RechazarSolicitudCierre",
+			Router:           "/rechazar_cierre",
+			AllowHTTPMethods: []string{"post"},
 			MethodParams:     param.Make(),
 			Filters:          nil,
 			Params:           nil})
