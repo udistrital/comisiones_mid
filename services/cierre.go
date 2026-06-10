@@ -611,3 +611,250 @@ func CrearSolicitudCierre(comisionCierre models.CrearSolicitudCierreEntrada) (ci
 
 	return salidaCreacionCierre, nil
 }
+
+func RechazarSolicitudCierre(cierreSolicitud models.CierreSolicitud) (cierre models.ResponseRechazarSolicitudCierre, err error) {
+
+	// =========================
+	// CONSULTAR ESTADO SOLICITUD
+	// =========================
+
+	var responseEstado models.ResponseListaEstadoSolicitud
+
+	err = request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"estado_solicitud?query=CodigoAbreviacion:NO_APROB",
+		&responseEstado,
+	)
+
+	if err != nil {
+		return models.ResponseRechazarSolicitudCierre{}, err
+	}
+
+	if !responseEstado.Success {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"error consultando estado solicitud: status %s",
+				responseEstado.Status,
+			)
+	}
+
+	if responseEstado.Status != "200" {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"respuesta inesperada consultando estado solicitud: %s",
+				responseEstado.Status,
+			)
+	}
+
+	if len(responseEstado.Data) != 1 {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"se esperaba 1 estado de solicitud y llegaron %d",
+				len(responseEstado.Data),
+			)
+	}
+
+	estadoSolicitud := responseEstado.Data[0]
+	fmt.Println("ESTADOOO")
+	fmt.Println(estadoSolicitud.Id)
+	// =========================
+	// CONSULTAR ÚLTIMO HISTÓRICO
+	// =========================
+
+	var responseHistorico models.ResponseListaHistoricoEstadoSolicitudPUT
+
+	err = request.GetJson(
+		beego.AppConfig.String("UrlComisionesCrud")+
+			"historico_estado_solicitud?query=solicitud_id:"+
+			fmt.Sprintf("%d", cierreSolicitud.SolicitudId)+
+			"&sortby=fecha_creacion&order=desc&limit=1",
+		&responseHistorico,
+	)
+
+	if err != nil {
+		return models.ResponseRechazarSolicitudCierre{}, err
+	}
+
+	if !responseHistorico.Success {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"error consultando histórico de solicitudes de cierre: status %s",
+				responseHistorico.Status,
+			)
+	}
+
+	if responseHistorico.Status != "200" {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"respuesta inesperada consultando histórico de solicitudes de cierre: %s",
+				responseHistorico.Status,
+			)
+	}
+
+	// =========================
+	// CAMBIAR A FALSE ÚLTIMO HISTÓRICO
+	// =========================
+
+	if len(responseHistorico.Data) != 1 {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"se esperaba 1 histórico y llegaron %d",
+				len(responseHistorico.Data),
+			)
+	}
+
+	ultimoHistorico := responseHistorico.Data[0]
+
+	fmt.Println("ULTIMO HISTORICO")
+	fmt.Println(ultimoHistorico.Id)
+
+	// Crear objeto limpio para UPDATE
+	historicoUpdate := models.HistoricoEstadoSolicitudPUT{
+		Id: ultimoHistorico.Id,
+
+		SolicitudId: &models.Solicitud{
+			Id: ultimoHistorico.SolicitudId.Id,
+		},
+
+		EstadoSolicitudId: &models.EstadoSolicitud{
+			Id: ultimoHistorico.EstadoSolicitudId.Id,
+		},
+
+		RolUsuario:    ultimoHistorico.RolUsuario,
+		TerceroId:     ultimoHistorico.TerceroId,
+		FechaCreacion: ultimoHistorico.FechaCreacion,
+		Activo:        false,
+	}
+
+	body, _ := json.MarshalIndent(historicoUpdate, "", "  ")
+	fmt.Println("BODY PUT")
+	fmt.Println(string(body))
+
+	var putResp map[string]interface{}
+
+	putURL := beego.AppConfig.String("UrlComisionesCrud") +
+		"historico_estado_solicitud/" +
+		fmt.Sprintf("%d", ultimoHistorico.Id)
+
+	err = request.SendJson(
+		putURL,
+		"PUT",
+		&putResp,
+		&historicoUpdate,
+	)
+
+	fmt.Println("RESPUESTA PUT")
+	fmt.Println(putResp)
+
+	if err != nil {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf("error PUT histórico: %v", err)
+	}
+
+	success, _ := putResp["Success"].(bool)
+
+	if !success {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"el PUT del histórico falló: %+v",
+				putResp,
+			)
+	}
+
+	fmt.Println("HISTORICO ANTERIOR INACTIVADO")
+
+	// =========================
+	// CREAR NUEVO HISTÓRICO
+	// =========================
+
+	nuevoHistorico := models.HistoricoEstadoSolicitud{
+		SolicitudId: &models.Solicitud{
+			Id: cierreSolicitud.SolicitudId,
+		},
+		EstadoSolicitudId: &models.EstadoSolicitud{
+			Id: estadoSolicitud.Id,
+		},
+		RolUsuario: cierreSolicitud.RolUsuario,
+		TerceroId:  cierreSolicitud.TerceroId,
+		Activo:     true,
+	}
+	fmt.Println("NUEVO HISTORICO")
+	fmt.Println(nuevoHistorico)
+
+	var respNuevoHistorico models.ResponseCreateHistoricoEstadoSolicitud
+
+	err = request.SendJson(
+		beego.AppConfig.String("UrlComisionesCrud")+"historico_estado_solicitud",
+		"POST",
+		&respNuevoHistorico,
+		&nuevoHistorico,
+	)
+
+	fmt.Println("RESPUESTA CREATE HISTORICO")
+	fmt.Printf("%+v\n", respNuevoHistorico)
+
+	if err != nil {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf("error creando histórico NO_APROB: %v", err)
+	}
+
+	if !respNuevoHistorico.Success {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"el servicio de histórico respondió con status %s",
+				respNuevoHistorico.Status,
+			)
+	}
+
+	if respNuevoHistorico.Status != "201" {
+		return models.ResponseRechazarSolicitudCierre{},
+			fmt.Errorf(
+				"respuesta inesperada creando histórico: %s",
+				respNuevoHistorico.Status,
+			)
+	}
+
+	fmt.Println("NUEVO HISTORICO CREADO")
+	fmt.Println(respNuevoHistorico.Data.Id)
+
+	if cierreSolicitud.Observacion != "" {
+		// =========================
+		// CREAR OBSERVACIÓN
+		// =========================
+
+		observacion := models.ObservacionCreate{
+			HistoricoEstadoSolicitudId: &models.HistoricoEstadoSolicitud{
+				Id: respNuevoHistorico.Data.Id,
+			},
+			Descripcion: cierreSolicitud.Observacion,
+			Activo:      true,
+		}
+
+		var respObservacion map[string]interface{}
+
+		err = request.SendJson(
+			beego.AppConfig.String("UrlComisionesCrud")+"observacion",
+			"POST",
+			&respObservacion,
+			&observacion,
+		)
+
+		if err != nil {
+			return models.ResponseRechazarSolicitudCierre{},
+				fmt.Errorf("error creando observación: %v", err)
+		}
+
+		fmt.Println("OBSERVACION CREADA")
+		fmt.Println(respObservacion)
+	}
+
+	// =========================
+	// RESPUESTA
+	// =========================
+
+	respuesta := models.ResponseRechazarSolicitudCierre{
+		SolicitudCierreId: cierreSolicitud.SolicitudId,
+	}
+
+	return respuesta, nil
+}
