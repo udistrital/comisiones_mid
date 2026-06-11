@@ -2,13 +2,15 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/comisiones_mid/services"
 )
+
+const consultaExitosa = "Consulta exitosa"
+const errJsonInvalido = "JSON inválido"
 
 // ProrrogaController operations for Cierre
 type CierreController struct {
@@ -32,7 +34,6 @@ func (c *CierreController) URLMapping() {
 // @Failure 403 body is empty
 // @router /crear_solicitud_cierre [post]
 func (c *CierreController) CrearSolicitudCierre() {
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CrearSolicitudCierreEntrada
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
@@ -40,7 +41,7 @@ func (c *CierreController) CrearSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -63,7 +64,7 @@ func (c *CierreController) CrearSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -142,7 +143,7 @@ func (c *CierreController) ValidarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data": map[string]interface{}{
 			"puede_crear_cierre": puedeCrear,
 			"mensaje":            mensaje,
@@ -217,7 +218,7 @@ func (c *CierreController) ConsultarHistoricoSolicitudesCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 
@@ -232,7 +233,6 @@ func (c *CierreController) ConsultarHistoricoSolicitudesCierre() {
 // @router /rechazar_cierre [post]
 func (c *CierreController) RechazarSolicitudCierre() {
 
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CierreAprobacionSolicitud
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
@@ -240,7 +240,7 @@ func (c *CierreController) RechazarSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -270,7 +270,7 @@ func (c *CierreController) RechazarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 
@@ -285,7 +285,6 @@ func (c *CierreController) RechazarSolicitudCierre() {
 // @router /aprobar_cierre [post]
 func (c *CierreController) AprobarSolicitudCierre() {
 
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CierreAprobacionSolicitud
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
@@ -293,7 +292,7 @@ func (c *CierreController) AprobarSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -323,7 +322,7 @@ func (c *CierreController) AprobarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 

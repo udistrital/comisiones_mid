@@ -12,6 +12,8 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const noConfiguradoUrlCom = "no está configurado UrlComisionesCrud"
+
 // esCodCumplimiento informa si un codigo_abreviacion corresponde a un estado de cumplimiento.
 func esCodCumplimiento(codigo string) bool {
 	return strings.HasPrefix(codigo, "CUMP_") || strings.HasPrefix(codigo, "INCUMP_")
@@ -22,7 +24,7 @@ func esCodCumplimiento(codigo string) bool {
 func ObtenerEstadosCumplimiento() ([]models.EstadoCumplimientoItem, error) {
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(noConfiguradoUrlCom)
 	}
 
 	u, err := url.Parse(helpers.JoinURL(baseCrud, "/estado_comision"))
@@ -70,7 +72,7 @@ func ObtenerHistorialCumplimiento(comisionId int) ([]models.RegistroCumplimiento
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(noConfiguradoUrlCom)
 	}
 
 	u, err := url.Parse(helpers.JoinURL(baseCrud, "/historico_estado_comision"))
@@ -149,7 +151,7 @@ func CrearRegistroCumplimiento(req models.CrearRegistroCumplimientoRequest) (int
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return 0, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return 0, fmt.Errorf(noConfiguradoUrlCom)
 	}
 
 	// Resolver TerceroId a partir de la cédula del usuario que registra el cumplimiento.
