@@ -13,12 +13,14 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const errorConfUrlCom = "no esta configurado UrlComisionesCrud"
+
 // ObtenerBandejaSecretariaGeneral retorna todas las comisiones activas con su estado actual.
-// Es el endpoint para la secretaria general/academica que ve todo el universo de comisiones.
+// Es el endpoint para la secretaria general/academica que ve totalmente el universo de comisiones.
 func ObtenerBandejaSecretariaGeneral() ([]models.ComisionBandeja, error) {
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no esta configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(errorConfUrlCom)
 	}
 	return obtenerTodasLasComisiones(baseCrud)
 }
@@ -34,7 +36,7 @@ func ObtenerBandejaDocente(cedula string) ([]models.ComisionBandeja, error) {
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no esta configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(errorConfUrlCom)
 	}
 
 	todas, err := obtenerTodasLasComisiones(baseCrud)
@@ -61,7 +63,7 @@ func ObtenerBandejaDecano(cedula string) ([]models.ComisionBandeja, error) {
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no esta configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(errorConfUrlCom)
 	}
 
 	urlJBPM := strings.TrimSpace(beego.AppConfig.String("UrlJBPM"))

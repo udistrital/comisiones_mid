@@ -13,6 +13,8 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const noConfiguradoUrlCom2 = "no está configurado UrlComisionesCrud"
+
 // momentosOrdenados define los grupos del panel en el orden de presentacion.
 var momentosOrdenados = []struct {
 	Prefijo string
@@ -35,7 +37,7 @@ func ObtenerDocumentosDesarrollo(comisionId int) ([]models.GrupoDocumentosDesarr
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
 	historicoId, err := getHistoricoActivoComision(baseCrud, comisionId)
@@ -121,7 +123,7 @@ func SubirDocumentoDesarrollo(req models.SubirDocumentoDesarrolloRequest) (int, 
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return 0, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return 0, fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
 	historicoId, err := getHistoricoActivoComision(baseCrud, req.ComisionId)
@@ -193,7 +195,7 @@ func DesactivarDocumentoDesarrollo(documentoComisionId int) error {
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return fmt.Errorf("no está configurado UrlComisionesCrud")
+		return fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
 	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/documento_comision/%d", documentoComisionId))

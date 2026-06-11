@@ -10,6 +10,12 @@ import (
 	"github.com/udistrital/comisiones_mid/services"
 )
 
+const confirmacionConsultaExitosa = "Consulta exitosa"
+const msgBodyInvalido = "Body invalido: "
+const erroComisionId = "comision_id debe ser un entero positivo"
+const keyComisionId = ":comision_id"
+const errorInternoServer = "Error interno del servidor"
+
 // ComisionSeguimientoController expone los endpoints de bandeja de seguimiento (fase 2).
 // Todos los endpoints estan bajo el namespace /v1/seguimiento.
 type ComisionSeguimientoController struct {
@@ -30,7 +36,7 @@ func (c *ComisionSeguimientoController) GetComisionesSecretariaGeneral() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -53,7 +59,7 @@ func (c *ComisionSeguimientoController) GetComisionesSecretariaGeneral() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -75,7 +81,7 @@ func (c *ComisionSeguimientoController) GetComisionesDocente() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -111,7 +117,7 @@ func (c *ComisionSeguimientoController) GetComisionesDocente() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -134,13 +140,13 @@ func (c *ComisionSeguimientoController) GetComentariosSeguimiento() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
 	}()
 
-	comisionIdStr := c.GetString(":comision_id")
+	comisionIdStr := c.GetString(keyComisionId)
 	codigoTipo := c.GetString(":codigo_tipo_seguimiento")
 
 	var comisionId int
@@ -149,7 +155,7 @@ func (c *ComisionSeguimientoController) GetComentariosSeguimiento() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  "400",
-			"Message": "comision_id debe ser un entero positivo",
+			"Message": erroComisionId,
 		}
 		c.ServeJSON()
 		return
@@ -183,7 +189,7 @@ func (c *ComisionSeguimientoController) GetComentariosSeguimiento() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -205,7 +211,7 @@ func (c *ComisionSeguimientoController) PostComentarioSeguimiento() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -217,7 +223,7 @@ func (c *ComisionSeguimientoController) PostComentarioSeguimiento() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  "400",
-			"Message": "Body invalido: " + err.Error(),
+			"Message": msgBodyInvalido + err.Error(),
 		}
 		c.ServeJSON()
 		return
@@ -262,19 +268,19 @@ func (c *ComisionSeguimientoController) GetDocumentosDesarrollo() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
 	}()
 
 	var comisionId int
-	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+	if _, err := fmt.Sscanf(c.GetString(keyComisionId), "%d", &comisionId); err != nil || comisionId <= 0 {
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  "400",
-			"Message": "comision_id debe ser un entero positivo",
+			"Message": erroComisionId,
 		}
 		c.ServeJSON()
 		return
@@ -297,7 +303,7 @@ func (c *ComisionSeguimientoController) GetDocumentosDesarrollo() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -319,7 +325,7 @@ func (c *ComisionSeguimientoController) PostDocumentoDesarrollo() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -331,7 +337,7 @@ func (c *ComisionSeguimientoController) PostDocumentoDesarrollo() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  "400",
-			"Message": "Body invalido: " + err.Error(),
+			"Message": msgBodyInvalido + err.Error(),
 		}
 		c.ServeJSON()
 		return
@@ -376,7 +382,7 @@ func (c *ComisionSeguimientoController) PutDesactivarDocumentoDesarrollo() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -432,7 +438,7 @@ func (c *ComisionSeguimientoController) GetDetalleComision() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -467,7 +473,7 @@ func (c *ComisionSeguimientoController) GetDetalleComision() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -489,19 +495,19 @@ func (c *ComisionSeguimientoController) GetDocumentosPago() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
 	}()
 
 	var comisionId int
-	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+	if _, err := fmt.Sscanf(c.GetString(keyComisionId), "%d", &comisionId); err != nil || comisionId <= 0 {
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  "400",
-			"Message": "comision_id debe ser un entero positivo",
+			"Message": erroComisionId,
 		}
 		c.ServeJSON()
 		return
@@ -524,7 +530,7 @@ func (c *ComisionSeguimientoController) GetDocumentosPago() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -542,7 +548,7 @@ func (c *ComisionSeguimientoController) GetEstadosCumplimiento() {
 			logs.Error("[ComisionSeguimiento] panic en GetEstadosCumplimiento: %v", r)
 			c.Ctx.Output.SetStatus(500)
 			c.Data["json"] = map[string]interface{}{
-				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+				"Success": false, "Status": "500", "Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -560,7 +566,7 @@ func (c *ComisionSeguimientoController) GetEstadosCumplimiento() {
 
 	c.Ctx.Output.SetStatus(200)
 	c.Data["json"] = map[string]interface{}{
-		"Success": true, "Status": "200", "Message": "Consulta exitosa", "Data": data,
+		"Success": true, "Status": "200", "Message": confirmacionConsultaExitosa, "Data": data,
 	}
 	c.ServeJSON()
 }
@@ -579,17 +585,17 @@ func (c *ComisionSeguimientoController) GetHistorialCumplimiento() {
 			logs.Error("[ComisionSeguimiento] panic en GetHistorialCumplimiento: %v", r)
 			c.Ctx.Output.SetStatus(500)
 			c.Data["json"] = map[string]interface{}{
-				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+				"Success": false, "Status": "500", "Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
 	}()
 
 	var comisionId int
-	if _, err := fmt.Sscanf(c.GetString(":comision_id"), "%d", &comisionId); err != nil || comisionId <= 0 {
+	if _, err := fmt.Sscanf(c.GetString(keyComisionId), "%d", &comisionId); err != nil || comisionId <= 0 {
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = map[string]interface{}{
-			"Success": false, "Status": "400", "Message": "comision_id debe ser un entero positivo",
+			"Success": false, "Status": "400", "Message": erroComisionId,
 		}
 		c.ServeJSON()
 		return
@@ -607,7 +613,7 @@ func (c *ComisionSeguimientoController) GetHistorialCumplimiento() {
 
 	c.Ctx.Output.SetStatus(200)
 	c.Data["json"] = map[string]interface{}{
-		"Success": true, "Status": "200", "Message": "Consulta exitosa", "Data": data,
+		"Success": true, "Status": "200", "Message": confirmacionConsultaExitosa, "Data": data,
 	}
 	c.ServeJSON()
 }
@@ -626,7 +632,7 @@ func (c *ComisionSeguimientoController) PostRegistroCumplimiento() {
 			logs.Error("[ComisionSeguimiento] panic en PostRegistroCumplimiento: %v", r)
 			c.Ctx.Output.SetStatus(500)
 			c.Data["json"] = map[string]interface{}{
-				"Success": false, "Status": "500", "Message": "Error interno del servidor",
+				"Success": false, "Status": "500", "Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -636,7 +642,7 @@ func (c *ComisionSeguimientoController) PostRegistroCumplimiento() {
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Ctx.Output.SetStatus(400)
 		c.Data["json"] = map[string]interface{}{
-			"Success": false, "Status": "400", "Message": "Body invalido: " + err.Error(),
+			"Success": false, "Status": "400", "Message": msgBodyInvalido + err.Error(),
 		}
 		c.ServeJSON()
 		return
@@ -675,7 +681,7 @@ func (c *ComisionSeguimientoController) GetComisionesDecano() {
 			c.Data["json"] = map[string]interface{}{
 				"Success": false,
 				"Status":  "500",
-				"Message": "Error interno del servidor",
+				"Message": errorInternoServer,
 			}
 			c.ServeJSON()
 		}
@@ -711,7 +717,7 @@ func (c *ComisionSeguimientoController) GetComisionesDecano() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": confirmacionConsultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
