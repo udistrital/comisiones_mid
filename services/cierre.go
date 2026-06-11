@@ -1108,7 +1108,7 @@ func AprobarSolicitudCierre(cierreSolicitud models.CierreAprobacionSolicitud) (c
 
 	err = request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"estado_comision?query=CodigoAbreviacion:CU_TOTAL",
+			"estado_comision?query=CodigoAbreviacion:COM_FIN",
 		&responseEstadoComision,
 	)
 
