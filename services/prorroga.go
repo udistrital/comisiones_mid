@@ -480,7 +480,7 @@ func CrearSolicitudProrroga(
 
 	err = request.GetJson(
 		beego.AppConfig.String("UrlComisionesCrud")+
-			"tipo_documento_solicitud?limit=-1&query=CodigoAbreviacion__startswith:SOL_PRO",
+			"tipo_documento_solicitud?limit=-1&query=CodigoAbreviacion__startswith:SOL_PRO,RolUsuario:DOCENTE",
 		&responseTipoDocumentoSolicitud,
 	)
 
