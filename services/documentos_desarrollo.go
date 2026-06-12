@@ -40,6 +40,10 @@ func ObtenerDocumentosDesarrollo(comisionId int) ([]models.GrupoDocumentosDesarr
 		return nil, fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
+	if _, err := getHistoricoActivoComision(baseCrud, comisionId); err != nil {
+		return nil, err
+	}
+
 	tipos, err := obtenerTiposDocumentoComision(baseCrud)
 	if err != nil {
 		return nil, err
