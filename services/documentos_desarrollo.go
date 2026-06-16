@@ -13,6 +13,8 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
+const noConfiguradoUrlCom2 = "no está configurado UrlComisionesCrud"
+
 // momentosOrdenados define los grupos del panel en el orden de presentacion.
 var momentosOrdenados = []struct {
 	Prefijo string
@@ -35,11 +37,10 @@ func ObtenerDocumentosDesarrollo(comisionId int) ([]models.GrupoDocumentosDesarr
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return nil, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return nil, fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
-	historicoId, err := getHistoricoActivoComision(baseCrud, comisionId)
-	if err != nil {
+	if _, err := getHistoricoActivoComision(baseCrud, comisionId); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +49,7 @@ func ObtenerDocumentosDesarrollo(comisionId int) ([]models.GrupoDocumentosDesarr
 		return nil, err
 	}
 
-	docsSubidos, err := obtenerDocumentosComisionPorHistorico(baseCrud, historicoId)
+	docsSubidos, err := obtenerTodosDocumentosComision(baseCrud, comisionId)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ func SubirDocumentoDesarrollo(req models.SubirDocumentoDesarrolloRequest) (int, 
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return 0, fmt.Errorf("no está configurado UrlComisionesCrud")
+		return 0, fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
 	historicoId, err := getHistoricoActivoComision(baseCrud, req.ComisionId)
@@ -193,7 +194,7 @@ func DesactivarDocumentoDesarrollo(documentoComisionId int) error {
 
 	baseCrud := strings.TrimSpace(beego.AppConfig.String("UrlComisionesCrud"))
 	if baseCrud == "" {
-		return fmt.Errorf("no está configurado UrlComisionesCrud")
+		return fmt.Errorf(noConfiguradoUrlCom2)
 	}
 
 	getURL := helpers.JoinURL(baseCrud, fmt.Sprintf("/documento_comision/%d", documentoComisionId))
@@ -254,6 +255,36 @@ func obtenerDocumentosComisionPorHistorico(baseCrud string, historicoId int) ([]
 	u.RawQuery = q.Encode()
 
 	logs.Info("[DocumentosDesarrollo] GET documento_comision %s", u.String())
+
+	var envelope map[string]interface{}
+	if err := request.GetJson(u.String(), &envelope); err != nil {
+		return nil, fmt.Errorf("error consultando documento_comision: %v", err)
+	}
+
+	raw, _ := envelope["Data"].([]interface{})
+	result := make([]map[string]interface{}, 0, len(raw))
+	for _, item := range raw {
+		if row, ok := item.(map[string]interface{}); ok {
+			result = append(result, row)
+		}
+	}
+	return result, nil
+}
+
+// obtenerTodosDocumentosComision retorna todos los documento_comision activos
+// para una comision, independientemente del historico al que pertenezcan.
+// Esto evita que los documentos "desaparezcan" al cambiar de estado.
+func obtenerTodosDocumentosComision(baseCrud string, comisionId int) ([]map[string]interface{}, error) {
+	u, err := url.Parse(helpers.JoinURL(baseCrud, "/documento_comision"))
+	if err != nil {
+		return nil, err
+	}
+	q := u.Query()
+	q.Set("query", fmt.Sprintf("HistoricoEstadoComisionId.ComisionId.Id:%d,Activo:true", comisionId))
+	q.Set("limit", "0")
+	u.RawQuery = q.Encode()
+
+	logs.Info("[DocumentosDesarrollo] GET todos documento_comision comision=%d %s", comisionId, u.String())
 
 	var envelope map[string]interface{}
 	if err := request.GetJson(u.String(), &envelope); err != nil {

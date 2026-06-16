@@ -9,6 +9,16 @@ type HistoricoEstadoSolicitud struct {
 	Activo            bool             `json:"Activo"`
 }
 
+type HistoricoEstadoSolicitudPUT struct {
+	Id                int              `json:"Id"`
+	SolicitudId       *Solicitud       `json:"SolicitudId"`
+	EstadoSolicitudId *EstadoSolicitud `json:"EstadoSolicitudId"`
+	RolUsuario        string           `json:"RolUsuario"`
+	TerceroId         int              `json:"TerceroId"`
+	Activo            bool             `json:"Activo"`
+	FechaCreacion     string           `json:"FechaCreacion"`
+}
+
 type ResponseCreateHistoricoEstadoSolicitud struct {
 	Data    HistoricoEstadoSolicitud `json:"Data"`
 	Message string                   `json:"Message"`
@@ -21,6 +31,13 @@ type ResponseListaHistoricoEstadoSolicitud struct {
 	Message string                     `json:"Message"`
 	Status  string                     `json:"Status"`
 	Success bool                       `json:"Success"`
+}
+
+type ResponseListaHistoricoEstadoSolicitudPUT struct {
+	Data    []HistoricoEstadoSolicitudPUT `json:"Data"`
+	Message string                        `json:"Message"`
+	Status  string                        `json:"Status"`
+	Success bool                          `json:"Success"`
 }
 
 type HistoricoSolicitudProrroga struct {

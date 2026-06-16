@@ -26,17 +26,12 @@ func ObtenerDocumentosPago(comisionId int) ([]models.DocumentoPagoItem, error) {
 		return nil, fmt.Errorf("no está configurado UrlComisionesCrud")
 	}
 
-	historicoId, err := getHistoricoActivoComision(baseCrud, comisionId)
-	if err != nil {
-		return nil, err
-	}
-
 	tipoId, err := GetIdByCodigoAbreviacion(baseCrud, "tipo_documento_comision", codigoPagoSoporte)
 	if err != nil {
 		return nil, fmt.Errorf("tipo_documento_comision '%s' no encontrado: %v", codigoPagoSoporte, err)
 	}
 
-	docsSubidos, err := obtenerDocumentosComisionPorHistoricoYTipo(baseCrud, historicoId, tipoId)
+	docsSubidos, err := obtenerDocumentosComisionPorComisionYTipo(baseCrud, comisionId, tipoId)
 	if err != nil {
 		return nil, err
 	}
@@ -59,12 +54,13 @@ func ObtenerDocumentosPago(comisionId int) ([]models.DocumentoPagoItem, error) {
 	return result, nil
 }
 
-// obtenerDocumentosComisionPorHistoricoYTipo consulta documento_comision filtrando
-// por historico activo Y tipo de documento especifico.
-func obtenerDocumentosComisionPorHistoricoYTipo(baseCrud string, historicoId, tipoId int) ([]map[string]interface{}, error) {
+// obtenerDocumentosComisionPorComisionYTipo consulta documento_comision filtrando
+// por comision (todos sus historicos) y tipo de documento.
+// Esto evita que los documentos "desaparezcan" al cambiar de estado.
+func obtenerDocumentosComisionPorComisionYTipo(baseCrud string, comisionId, tipoId int) ([]map[string]interface{}, error) {
 	urlStr := helpers.JoinURL(baseCrud, fmt.Sprintf(
-		"/documento_comision?query=HistoricoEstadoComisionId.Id:%d,TipoDocumentoId.Id:%d,Activo:true&limit=0",
-		historicoId, tipoId,
+		"/documento_comision?query=HistoricoEstadoComisionId.ComisionId.Id:%d,TipoDocumentoId.Id:%d,Activo:true&limit=0",
+		comisionId, tipoId,
 	))
 
 	logs.Info("[DocumentosPago] GET documento_comision %s", urlStr)

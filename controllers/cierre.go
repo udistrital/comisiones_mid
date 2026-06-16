@@ -2,13 +2,15 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/astaxie/beego"
 	"github.com/udistrital/comisiones_mid/models"
 	"github.com/udistrital/comisiones_mid/services"
 )
+
+const consultaExitosa = "Consulta exitosa"
+const errJsonInvalido = "JSON inválido"
 
 // ProrrogaController operations for Cierre
 type CierreController struct {
@@ -20,6 +22,8 @@ func (c *CierreController) URLMapping() {
 	c.Mapping("CrearSolicitudCierre", c.CrearSolicitudCierre)
 	c.Mapping("ValidarSolicitudCierre", c.ValidarSolicitudCierre)
 	c.Mapping("ConsultarHistoricoSolicitudesCierre", c.ConsultarHistoricoSolicitudesCierre)
+	c.Mapping("RechazarSolicitudCierre", c.RechazarSolicitudCierre)
+	c.Mapping("AprobarSolicitudCierre", c.AprobarSolicitudCierre)
 }
 
 // Post ...
@@ -30,7 +34,6 @@ func (c *CierreController) URLMapping() {
 // @Failure 403 body is empty
 // @router /crear_solicitud_cierre [post]
 func (c *CierreController) CrearSolicitudCierre() {
-	fmt.Println("ENTRA A CREAR CIERRE")
 	var v models.CrearSolicitudCierreEntrada
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
 
@@ -38,7 +41,7 @@ func (c *CierreController) CrearSolicitudCierre() {
 		c.Data["json"] = map[string]interface{}{
 			"Success": false,
 			"Status":  400,
-			"Message": "JSON inválido",
+			"Message": errJsonInvalido,
 			"Data":    nil,
 		}
 		c.ServeJSON()
@@ -61,7 +64,7 @@ func (c *CierreController) CrearSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 	c.ServeJSON()
@@ -140,7 +143,7 @@ func (c *CierreController) ValidarSolicitudCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
 		"Data": map[string]interface{}{
 			"puede_crear_cierre": puedeCrear,
 			"mensaje":            mensaje,
@@ -215,7 +218,111 @@ func (c *CierreController) ConsultarHistoricoSolicitudesCierre() {
 	c.Data["json"] = map[string]interface{}{
 		"Success": true,
 		"Status":  "200",
-		"Message": "Consulta exitosa",
+		"Message": consultaExitosa,
+		"Data":    data,
+	}
+
+	c.ServeJSON()
+}
+
+// @Title RechazarSolicitudCierre
+// @Description Rechaza la solicitud de cierre
+// @Success 200 {object} models.ResponseRechazarSolicitudCierre
+// @Failure 400 id inválido
+// @Failure 500 error interno
+// @router /rechazar_cierre [post]
+func (c *CierreController) RechazarSolicitudCierre() {
+
+	var v models.CierreAprobacionSolicitud
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
+
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  400,
+			"Message": errJsonInvalido,
+			"Data":    nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.RechazarSolicitudCierre(v)
+
+	if err != nil {
+
+		c.Ctx.Output.SetStatus(500)
+
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error rechazando la solicitud de cierre",
+			"Error":   err.Error(),
+			"Data":    nil,
+		}
+
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": consultaExitosa,
+		"Data":    data,
+	}
+
+	c.ServeJSON()
+}
+
+// @Title AprobarSolicitudCierre
+// @Description Aprueba la solicitud de cierre
+// @Success 200 {object} models.ResponseAprobarSolicitudCierre
+// @Failure 400 id inválido
+// @Failure 500 error interno
+// @router /aprobar_cierre [post]
+func (c *CierreController) AprobarSolicitudCierre() {
+
+	var v models.CierreAprobacionSolicitud
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &v); err != nil {
+
+		c.Ctx.Output.SetStatus(400)
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  400,
+			"Message": errJsonInvalido,
+			"Data":    nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	data, err := services.AprobarSolicitudCierre(v)
+
+	if err != nil {
+
+		c.Ctx.Output.SetStatus(500)
+
+		c.Data["json"] = map[string]interface{}{
+			"Success": false,
+			"Status":  "500",
+			"Message": "Error rechazando la solicitud de cierre",
+			"Error":   err.Error(),
+			"Data":    nil,
+		}
+
+		c.ServeJSON()
+		return
+	}
+
+	c.Ctx.Output.SetStatus(200)
+
+	c.Data["json"] = map[string]interface{}{
+		"Success": true,
+		"Status":  "200",
+		"Message": consultaExitosa,
 		"Data":    data,
 	}
 
