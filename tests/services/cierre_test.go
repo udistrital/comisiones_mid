@@ -12,8 +12,6 @@ import (
 	"github.com/udistrital/utils_oas/request"
 )
 
-
-
 // =====================================================
 // TEST VALIDAR PUEDE CREAR SOLICITUD CIERRE
 // =====================================================
@@ -1209,7 +1207,6 @@ func TestCrearSolicitudCierre(t *testing.T) {
 	})
 }
 
-
 // =====================================================
 // TEST RECHAZAR SOLICITUD CIERRE
 // =====================================================
@@ -1353,7 +1350,6 @@ func TestRechazarSolicitudCierre(t *testing.T) {
 		}
 	})
 }
-
 
 // =====================================================
 // TEST APROBAR SOLICITUD CIERRE
