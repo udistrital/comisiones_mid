@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/plugins/cors"
 	_ "github.com/udistrital/comisiones_mid/routers"
 	apistatus "github.com/udistrital/utils_oas/apiStatusLib"
@@ -35,13 +34,11 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
-	err := xray.InitXRay()
-	if err != nil {
-		logs.Error("error configurando AWS XRay: %v", err)
-	}
+
 	apistatus.Init()
 	auditoria.InitMiddleware()
-	beego.ErrorController(&customerrorv2.CustomErrorController{})
 	security.SetSecurityHeaders()
+	xray.Init()
+	beego.ErrorController(&customerrorv2.CustomErrorController{})
 	beego.Run()
 }
