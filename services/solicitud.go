@@ -580,7 +580,7 @@ func obtenerTerceroIdPorIdentificacion(identificacion int) (int, error) {
 func obtenerSolicitudesPorTercero(terceroId int) ([]interface{}, error) {
 	var persona map[string]interface{}
 	err := request.GetJson(
-		beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", terceroId),
+		beego.AppConfig.String("UrlComisionesCrud")+"solicitud?limit=-1&sortby=id&order=desc&query=TerceroId:"+fmt.Sprintf("%d", terceroId)+",Activo:true",
 		&persona,
 	)
 	if err != nil {

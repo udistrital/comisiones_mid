@@ -85,6 +85,9 @@ func TestBuscarSolicitudIdentificacion(t *testing.T) {
 				return nil
 
 			case strings.Contains(rawURL, "TerceroId"):
+				if !strings.Contains(rawURL, "query=TerceroId:42,Activo:true") {
+					return errors.New("la consulta de solicitudes no filtra por Activo:true: " + rawURL)
+				}
 				*(target.(*map[string]interface{})) = map[string]interface{}{
 					"Data": []interface{}{
 						map[string]interface{}{
